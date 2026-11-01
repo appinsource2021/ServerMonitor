@@ -291,3 +291,28 @@ struct InstallError: LocalizedError {
     init(_ m: String) { message = m }
     var errorDescription: String? { message }
 }
+
+/// The agent version packaged with this build (`make ios-resources` writes Resources/Agent/VERSION).
+enum BundledAgent {
+    static let version: String = {
+        guard let dir = Bundle.main.url(forResource: "Agent", withExtension: nil),
+              let s = try? String(contentsOf: dir.appendingPathComponent("VERSION"), encoding: .utf8) else { return "" }
+        return s.trimmingCharacters(in: .whitespacesAndNewlines)
+    }()
+
+    /// true when the server's agent is older than the bundled one ("0.3.2" < "0.3.3").
+    static func isOutdated(_ server: String?) -> Bool {
+        guard let server, !server.isEmpty, !version.isEmpty else { return false }
+        return compare(server, version) < 0
+    }
+
+    static func compare(_ a: String, _ b: String) -> Int {
+        func parts(_ v: String) -> [Int] { v.split(separator: ".").map { part in Int(part.prefix { $0.isNumber }) ?? 0 } }
+        let x = parts(a), y = parts(b)
+        for i in 0..<max(x.count, y.count) {
+            let p = i < x.count ? x[i] : 0, q = i < y.count ? y[i] : 0
+            if p != q { return p < q ? -1 : 1 }
+        }
+        return 0
+    }
+}

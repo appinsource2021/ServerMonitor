@@ -145,7 +145,7 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys
 
 ## 7. Uygulamayı kullanmak
 
-- **Servers:** Sorunlu sunucular en üstte listelenir. Kartlarda CPU, RAM, disk ve çalışan container sayısı görünür. Bağlantı koparsa kartta **Reconnect** butonu çıkar.
+- **Servers:** Sorunlu sunucular en üstte listelenir. Kartlarda CPU, RAM, disk ve çalışan container sayısı görünür. Bağlantı koparsa kartta **Reconnect** butonu çıkar. Sunucudaki agent uygulamadakinden eskiyse kartta sarı **Agent update needed** şeridi ve **Update now** düğmesi çıkar; dokununca güncelleme başlar.
 - **Sunucu detayı:**
   - CPU, RAM ve disk göstergeleri, son 1 saatlik CPU grafiği.
   - **Containers / Services** sekmeleri.

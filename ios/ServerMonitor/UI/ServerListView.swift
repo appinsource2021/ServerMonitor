@@ -191,7 +191,49 @@ struct ServerCard: View {
                 } else if !server.installed {
                     Text("Agent not installed").font(.system(size: 12)).foregroundStyle(Theme.warn)
                 }
+                if server.installed, !server.isRelay, let v = server.agentVersion, BundledAgent.isOutdated(v) {
+                    AgentUpdateChip(server: server, current: v)
+                }
             }
+        }
+    }
+}
+
+/// Yellow strip on a server card when its agent is older than the one in the app.
+/// Tapping anywhere on it starts the same update as ··· › Update agent.
+struct AgentUpdateChip: View {
+    @Environment(ServerStore.self) private var store
+    let server: ServerRecord
+    let current: String
+    @State private var updating: Installer?
+
+    var body: some View {
+        Button {
+            let inst = Installer(input: NewServerInput(host: server.host, username: server.username), store: store, existing: server)
+            updating = inst
+            Task { await inst.run() }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warn).font(.system(size: 15))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Agent update needed").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.warn)
+                    Text("Server runs \(current) · app has \(BundledAgent.version)").font(.system(size: 11)).foregroundStyle(Theme.text2)
+                }
+                Spacer(minLength: 6)
+                Text("Update now")
+                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.bg)
+                    .padding(.horizontal, 12).frame(minHeight: 32)
+                    .background(Theme.warn, in: Capsule())
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.warn.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.warn.opacity(0.35)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Agent update needed, server runs \(current). Update now")
+        .sheet(item: $updating) { inst in
+            NavigationStack { InstallProgressView(installer: inst, title: "Updating \(server.name)") }
         }
     }
 }

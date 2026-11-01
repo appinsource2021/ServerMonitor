@@ -57,6 +57,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
   2. Run `make ios-resources`.
   3. The bundled binary ships with the app.
   4. On each server, run ··· → **Update agent** in the app. The installer keeps `/etc/srvmon/config.json` on updates.
+  5. `make ios-resources` also writes `Resources/Agent/VERSION`; `BundledAgent` (Installer.swift) reads it and the server list shows a yellow **Update now** strip on every card whose agent is older.
 
 ## Conventions and gotchas
 - Every SSH call has a deadline (`SSHSession.run(_, timeout:)`, `AgentAPI.raw(..., timeout:)`, default 90 s).
