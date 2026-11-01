@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -645,4 +647,212 @@ func (s *Server) fsDelete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, 200, map[string]any{"ok": true, "path": p, "freed_bytes": freed, "entries": entries})
+}
+
+// ---- create and upload ----
+
+// Uploads land here over SFTP (the app writes as root), then /v1/fs/import moves
+// them into place under the deny-list rules. Not /tmp: the unit has PrivateTmp.
+var fsUploadDir = "/var/lib/srvmon/upload"
+
+var fsUploadNameRe = regexp.MustCompile(`^[A-Za-z0-9-]{8,64}$`)
+
+func (s *Server) fsMkdir(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Path string `json:"path"`
+	}
+	if err := readJSON(r, &in); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	p, err := fsCleanPath(in.Path)
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	if d := fsProtected(p); d != "" {
+		writeErr(w, 403, "protected path ("+d+")")
+		return
+	}
+	if _, err := os.Lstat(p); err == nil {
+		writeErr(w, 409, "something with that name already exists")
+		return
+	}
+	if err := os.Mkdir(p, 0o755); err != nil {
+		if os.IsNotExist(err) {
+			writeErr(w, 400, "parent directory does not exist")
+			return
+		}
+		writeErr(w, 500, err.Error())
+		return
+	}
+	fi, _ := os.Lstat(p)
+	writeJSON(w, 200, fsEntry(p, fi, newIDNames()))
+}
+
+// fsUploadSlot creates the upload directory, prunes stale uploads and hands the
+// app a path to write to over SFTP.
+func (s *Server) fsUploadSlot(w http.ResponseWriter, r *http.Request) {
+	if err := os.MkdirAll(fsUploadDir, 0o700); err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	if des, err := os.ReadDir(fsUploadDir); err == nil {
+		for _, de := range des {
+			if fi, err := de.Info(); err == nil && time.Since(fi.ModTime()) > 24*time.Hour {
+				_ = os.Remove(filepath.Join(fsUploadDir, de.Name()))
+			}
+		}
+	}
+	b := make([]byte, 12)
+	if _, err := rand.Read(b); err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, map[string]any{"temp": filepath.Join(fsUploadDir, hex.EncodeToString(b))})
+}
+
+// fsImport moves an uploaded file into place: deny list, no overwrite unless
+// asked (then a backup is kept), mode and owner of a replaced file preserved.
+func (s *Server) fsImport(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Temp      string `json:"temp"`
+		Path      string `json:"path"`
+		Overwrite bool   `json:"overwrite"`
+	}
+	if err := readJSON(r, &in); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	if filepath.Dir(in.Temp) != fsUploadDir || !fsUploadNameRe.MatchString(filepath.Base(in.Temp)) {
+		writeErr(w, 400, "temp must be a path from /v1/fs/upload")
+		return
+	}
+	p, err := fsCleanPath(in.Path)
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	if d := fsProtected(p); d != "" {
+		writeErr(w, 403, "protected path ("+d+")")
+		return
+	}
+	tfi, err := os.Lstat(in.Temp)
+	if err != nil || !tfi.Mode().IsRegular() {
+		writeErr(w, 400, "uploaded file not found")
+		return
+	}
+	mode, st := os.FileMode(0o644), (*syscall.Stat_t)(nil)
+	if fi, err := os.Lstat(p); err == nil {
+		switch {
+		case fi.IsDir():
+			writeErr(w, 400, "a folder with that name exists")
+			return
+		case !fi.Mode().IsRegular():
+			writeErr(w, 400, "cannot replace a special file or link")
+			return
+		case !in.Overwrite:
+			writeErr(w, 409, "a file with that name already exists")
+			return
+		}
+		if _, err := fsBackupCopy(p, fi.Mode()); err != nil {
+			writeErr(w, 500, "backup failed: "+err.Error())
+			return
+		}
+		mode, st = fi.Mode().Perm(), statT(fi)
+	} else if dfi, err := os.Stat(filepath.Dir(p)); err != nil || !dfi.IsDir() {
+		writeErr(w, 400, "parent directory does not exist")
+		return
+	}
+	if err := fsMoveInto(in.Temp, p, mode, st); err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	fi, _ := os.Lstat(p)
+	writeJSON(w, 200, fsEntry(p, fi, newIDNames()))
+}
+
+// fsBackupCopy is fsBackup for files too big to hold in memory.
+func fsBackupCopy(target string, mode os.FileMode) (string, error) {
+	src, err := os.Open(target)
+	if err != nil {
+		return "", err
+	}
+	defer src.Close()
+	base := target + ".srvmon-bak-"
+	ts := time.Now().Format("20060102-150405")
+	bak := base + ts
+	for i := 1; ; i++ {
+		if _, err := os.Lstat(bak); err != nil {
+			break
+		}
+		bak = base + ts + "-" + strconv.Itoa(i)
+	}
+	dst, err := os.OpenFile(bak, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode.Perm())
+	if err != nil {
+		return "", err
+	}
+	if _, err := io.Copy(dst, src); err != nil {
+		dst.Close()
+		os.Remove(bak)
+		return "", err
+	}
+	if err := dst.Close(); err != nil {
+		return "", err
+	}
+	old, _ := filepath.Glob(base + "*")
+	sort.Strings(old)
+	for len(old) > fsKeepBak {
+		_ = os.Remove(old[0])
+		old = old[1:]
+	}
+	return bak, nil
+}
+
+// fsMoveInto renames temp onto target; across filesystems it copies through a
+// temp file in the target's directory and renames that (still atomic).
+func fsMoveInto(temp, target string, mode os.FileMode, st *syscall.Stat_t) error {
+	_ = os.Chmod(temp, mode)
+	if st != nil {
+		_ = os.Chown(temp, int(st.Uid), int(st.Gid))
+	}
+	err := os.Rename(temp, target)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, syscall.EXDEV) {
+		return err
+	}
+	src, err := os.Open(temp)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	tmp, err := os.CreateTemp(filepath.Dir(target), ".srvmon-tmp-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := io.Copy(tmp, src); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(mode); err != nil {
+		tmp.Close()
+		return err
+	}
+	if st != nil {
+		_ = tmp.Chown(int(st.Uid), int(st.Gid))
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp.Name(), target); err != nil {
+		return err
+	}
+	return os.Remove(temp)
 }

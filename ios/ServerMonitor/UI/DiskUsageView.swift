@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Disk drill-down: folder sizes (du scan), Docker's share, and the files in the
 /// folder. Folders and files can be deleted with a swipe; files open in `FileEditorView`.
@@ -24,6 +25,12 @@ struct DiskUsageView: View {
     @State private var deleting = false
     @State private var removed: Set<String> = []  // deleted in this screen; hidden until the next scan
     @State private var notice: String?
+    @State private var newName = ""
+    @State private var askNewFile = false
+    @State private var askNewFolder = false
+    @State private var newFilePath: String?
+    @State private var importing = false
+    @State private var uploadStatus: String?
 
     private var disk: DiskInfo? {
         let snap = store.states[server.id]?.summary?.snapshot
@@ -45,6 +52,18 @@ struct DiskUsageView: View {
             if let notice {
                 Section { Banner(icon: "checkmark.circle.fill", title: notice, text: "Pull down to measure the folders again.", color: Theme.ok) }.plainRow()
             }
+            if let uploadStatus {
+                Section {
+                    Card {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 10) { ProgressView(); Text(uploadStatus).font(.system(size: 14, weight: .medium)) }
+                            IndeterminateBar(color: Theme.accent)
+                            Text("Sent over SFTP, then checked and placed by the agent.").font(.system(size: 12)).foregroundStyle(Theme.text2)
+                        }
+                    }
+                }
+                .plainRow()
+            }
             if path == "/" {
                 Section {
                     Button { showCleanup = true } label: { Label("Smart cleanup", systemImage: "sparkles") }
@@ -65,11 +84,35 @@ struct DiskUsageView: View {
         .navigationTitle(path == "/" ? "Disk" : (path as NSString).lastPathComponent)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if !server.isRelay && listing != nil {
+                    Menu {
+                        Button { newName = ""; askNewFile = true } label: { Label("New file", systemImage: "doc.badge.plus") }
+                        Button { newName = ""; askNewFolder = true } label: { Label("New folder", systemImage: "folder.badge.plus") }
+                        Button { importing = true } label: { Label("Upload from Files", systemImage: "square.and.arrow.up") }
+                    } label: { Image(systemName: "plus") }
+                    .disabled(uploadStatus != nil)
+                    .accessibilityLabel("Add")
+                }
                 Button { Task { await load(force: true) } } label: { Image(systemName: "arrow.clockwise") }
                     .disabled(scan?.status == "running")
                     .accessibilityLabel("Scan again")
             }
+        }
+        .alert("New file", isPresented: $askNewFile) {
+            TextField("name.conf", text: $newName).autocorrectionDisabled().textInputAutocapitalization(.never)
+            Button("Create") { if let n = validName(newName) { newFilePath = join(n) } }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("Opens an empty editor. The file is created in \(path) when you save.") }
+        .alert("New folder", isPresented: $askNewFolder) {
+            TextField("name", text: $newName).autocorrectionDisabled().textInputAutocapitalization(.never)
+            Button("Create") { if let n = validName(newName) { Task { await makeFolder(n) } } }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("Created in \(path).") }
+        .navigationDestination(item: $newFilePath) { p in FileEditorView(server: server, path: p, create: true) }
+        .onChange(of: newFilePath) { _, p in if p == nil { Task { await loadListing() } } }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+            if case .success(let urls) = result { Task { await upload(urls) } }
         }
         .task { await load(force: false) }
         .refreshable { await load(force: true) }
@@ -422,6 +465,68 @@ struct DiskUsageView: View {
                 pollError = friendlyError(error)
             }
         }
+    }
+
+    // MARK: create and upload
+
+    private func join(_ name: String) -> String { (path as NSString).appendingPathComponent(name) }
+
+    private func validName(_ raw: String) -> String? {
+        let n = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !n.isEmpty, !n.contains("/"), n != ".", n != "..", n.count <= 255 else {
+            error = "Use a plain name without a slash."
+            return nil
+        }
+        return n
+    }
+
+    private func makeFolder(_ name: String) async {
+        struct Body: Encodable { let path: String }
+        do {
+            _ = try await store.api(for: server).send("POST", "/v1/fs/mkdir", Body(path: join(name)), timeout: .seconds(30))
+            error = nil
+            notice = "Created folder \(name)"
+            await loadListing()
+        } catch let e as AgentAPI.HTTPError where e.status == 404 && e.message.isEmpty || e.status == 405 {
+            error = "Creating folders needs agent 0.3.3 on this server. Use ··· › Update agent."
+        } catch {
+            self.error = friendlyError(error)
+        }
+    }
+
+    /// Each file goes to an agent-provided temp path over SFTP, then the agent
+    /// moves it into place (deny list, no silent overwrite, backup if replacing).
+    private func upload(_ urls: [URL]) async {
+        let session = store.session(for: server)
+        let api = store.api(for: server)
+        struct Slot: Decodable { let temp: String }
+        struct Body: Encodable { let temp: String; let path: String; let overwrite: Bool }
+        var done = 0
+        var failures: [String] = []
+        for (i, url) in urls.enumerated() {
+            let name = url.lastPathComponent
+            uploadStatus = "Uploading \(name) (\(i + 1) of \(urls.count))"
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let data = try Data(contentsOf: url)
+                guard data.count <= 200 << 20 else { failures.append("\(name): over 200 MB"); continue }
+                let slot = try JSON.decoder.decode(Slot.self, from: try await api.post("/v1/fs/upload"))
+                try await session.upload(data, to: slot.temp)
+                _ = try await api.send("POST", "/v1/fs/import", Body(temp: slot.temp, path: join(name), overwrite: false), timeout: .seconds(300))
+                done += 1
+            } catch let e as AgentAPI.HTTPError where e.status == 409 {
+                failures.append("\(name): a file with that name already exists (delete it first)")
+            } catch let e as AgentAPI.HTTPError where e.status == 404 && e.message.isEmpty || e.status == 405 {
+                failures.append("\(name): uploading needs agent 0.3.3 (··· › Update agent)")
+            } catch {
+                failures.append("\(name): \(friendlyError(error))")
+            }
+        }
+        uploadStatus = nil
+        if done > 0 { notice = done == 1 ? "Uploaded 1 file" : "Uploaded \(done) files" }
+        error = failures.isEmpty ? nil : failures.joined(separator: "\n")
+        await loadListing()
     }
 
     // MARK: delete

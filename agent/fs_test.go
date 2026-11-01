@@ -323,3 +323,90 @@ func TestFSRelayMemberGets403(t *testing.T) {
 		t.Fatalf("admin list should be 200, got %d", code)
 	}
 }
+
+func TestFSMkdirAndImport(t *testing.T) {
+	srv := newFSServer(t)
+	h := srv.Handler()
+	dir := t.TempDir()
+	old := fsUploadDir
+	fsUploadDir = filepath.Join(dir, "uploads")
+	defer func() { fsUploadDir = old }()
+
+	// mkdir
+	nd := filepath.Join(dir, "newdir")
+	if code, out := fsCall(t, h, "POST", "/v1/fs/mkdir", map[string]any{"path": nd}); code != 200 || out["type"] != "dir" {
+		t.Fatalf("mkdir %d %v", code, out)
+	}
+	if code, _ := fsCall(t, h, "POST", "/v1/fs/mkdir", map[string]any{"path": nd}); code != 409 {
+		t.Fatalf("mkdir twice should be 409, got %d", code)
+	}
+	if code, _ := fsCall(t, h, "POST", "/v1/fs/mkdir", map[string]any{"path": "/usr/newdir"}); code != 403 {
+		t.Fatalf("mkdir under /usr should be 403, got %d", code)
+	}
+	if code, _ := fsCall(t, h, "POST", "/v1/fs/mkdir", map[string]any{"path": filepath.Join(dir, "nope", "x")}); code != 400 {
+		t.Fatalf("mkdir without parent should be 400, got %d", code)
+	}
+
+	// upload slot + import into a new name
+	code, out := fsCall(t, h, "POST", "/v1/fs/upload", nil)
+	if code != 200 {
+		t.Fatalf("slot %d %v", code, out)
+	}
+	temp := out["temp"].(string)
+	if filepath.Dir(temp) != fsUploadDir {
+		t.Fatalf("temp %q not in upload dir", temp)
+	}
+	os.WriteFile(temp, []byte("uploaded\n"), 0o600)
+	dst := filepath.Join(nd, "file.txt")
+	code, out = fsCall(t, h, "POST", "/v1/fs/import", map[string]any{"temp": temp, "path": dst})
+	if code != 200 || out["name"] != "file.txt" || out["bytes"].(float64) != 9 {
+		t.Fatalf("import %d %v", code, out)
+	}
+	if b, _ := os.ReadFile(dst); string(b) != "uploaded\n" {
+		t.Fatal("content not moved")
+	}
+	if fi, _ := os.Stat(dst); fi.Mode().Perm() != 0o644 {
+		t.Fatalf("new file mode %v, want 0644", fi.Mode())
+	}
+	if _, err := os.Lstat(temp); !os.IsNotExist(err) {
+		t.Fatal("temp file should be gone")
+	}
+
+	// same name again: 409 without overwrite, backup + mode kept with it
+	os.Chmod(dst, 0o640)
+	temp2 := filepath.Join(fsUploadDir, "abcdefgh1234")
+	os.WriteFile(temp2, []byte("v2\n"), 0o600)
+	if code, _ := fsCall(t, h, "POST", "/v1/fs/import", map[string]any{"temp": temp2, "path": dst}); code != 409 {
+		t.Fatalf("import over existing should be 409, got %d", code)
+	}
+	code, out = fsCall(t, h, "POST", "/v1/fs/import", map[string]any{"temp": temp2, "path": dst, "overwrite": true})
+	if code != 200 {
+		t.Fatalf("overwrite %d %v", code, out)
+	}
+	if b, _ := os.ReadFile(dst); string(b) != "v2\n" {
+		t.Fatal("overwrite did not replace content")
+	}
+	if fi, _ := os.Stat(dst); fi.Mode().Perm() != 0o640 {
+		t.Fatalf("mode after overwrite %v, want 0640", fi.Mode())
+	}
+	if baks, _ := filepath.Glob(dst + ".srvmon-bak-*"); len(baks) != 1 {
+		t.Fatalf("want 1 backup, got %d", len(baks))
+	}
+
+	// bad temp paths and protected targets are refused, the temp stays
+	os.WriteFile(filepath.Join(dir, "outside"), []byte("x"), 0o600)
+	if code, _ := fsCall(t, h, "POST", "/v1/fs/import", map[string]any{"temp": filepath.Join(dir, "outside"), "path": dst, "overwrite": true}); code != 400 {
+		t.Fatalf("temp outside the upload dir should be 400, got %d", code)
+	}
+	temp3 := filepath.Join(fsUploadDir, "zzzzzzzz9999")
+	os.WriteFile(temp3, []byte("x"), 0o600)
+	if code, _ := fsCall(t, h, "POST", "/v1/fs/import", map[string]any{"temp": temp3, "path": "/usr/share/x"}); code != 403 {
+		t.Fatalf("import into /usr should be 403, got %d", code)
+	}
+	if code, _ := fsCall(t, h, "POST", "/v1/fs/import", map[string]any{"temp": temp3, "path": nd}); code != 400 {
+		t.Fatalf("import onto a folder should be 400, got %d", code)
+	}
+	if _, err := os.Lstat(temp3); err != nil {
+		t.Fatal("refused import must keep the temp file")
+	}
+}

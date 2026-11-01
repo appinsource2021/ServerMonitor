@@ -69,6 +69,9 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /v1/fs/read", s.fsRead)
 	m.HandleFunc("PUT /v1/fs/write", s.fsWrite)
 	m.HandleFunc("DELETE /v1/fs", s.fsDelete)
+	m.HandleFunc("POST /v1/fs/mkdir", s.fsMkdir)
+	m.HandleFunc("POST /v1/fs/upload", s.fsUploadSlot)
+	m.HandleFunc("POST /v1/fs/import", s.fsImport)
 	return limitBody(m)
 }
 

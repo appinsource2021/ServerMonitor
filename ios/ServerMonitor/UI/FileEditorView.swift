@@ -15,7 +15,10 @@ struct FileEditorView: View {
     @Environment(ServerStore.self) private var store
     let server: ServerRecord
     let path: String
+    var create = false   // start empty in edit mode; the first save creates the file
 
+    @Environment(\.dismiss) private var dismiss
+    @State private var isNew = false
     @State private var file: FSFile?
     @State private var lines: [String] = []
     @State private var text = ""
@@ -33,7 +36,7 @@ struct FileEditorView: View {
     @FocusState private var searchFocused: Bool
 
     private var name: String { (path as NSString).lastPathComponent }
-    private var dirty: Bool { editing && text != (file?.content ?? "") }
+    private var dirty: Bool { editing && (isNew || text != (file?.content ?? "")) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -68,7 +71,7 @@ struct FileEditorView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(editing)
         .toolbar { toolbarContent }
-        .task { await load() }
+        .task { if create { startNew() } else { await load() } }
         .alert("The file changed on the server", isPresented: $conflict) {
             Button("Reload and lose my changes") { Task { await load() } }
             Button("Overwrite anyway", role: .destructive) { Task { await save(overwrite: true) } }
@@ -77,14 +80,19 @@ struct FileEditorView: View {
             Text("\(name) was modified since you opened it. Reload to see the new version, or overwrite it with your copy. A backup of the server's version is kept either way.")
         }
         .confirmationDialog("Discard your changes?", isPresented: $showDiscard, titleVisibility: .visible) {
-            Button("Discard changes", role: .destructive) { text = file?.content ?? ""; editing = false }
+            Button("Discard changes", role: .destructive) {
+                if isNew { dismiss() } else { text = file?.content ?? ""; editing = false }
+            }
         }
     }
 
     @ToolbarContentBuilder private var toolbarContent: some ToolbarContent {
         if editing {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { if dirty { showDiscard = true } else { editing = false } }.disabled(saving)
+                Button("Cancel") {
+                    if isNew && text.isEmpty { dismiss() } else if dirty { showDiscard = true } else { editing = false }
+                }
+                .disabled(saving)
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button { Task { await save(overwrite: false) } } label: {
@@ -117,8 +125,12 @@ struct FileEditorView: View {
     private func infoBar(_ f: FSFile) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(f.path).font(Theme.mono(11)).foregroundStyle(Theme.text3).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
-            Text("\(Fmt.bytes(f.bytes)) · \(lines.count) lines · modified \(Fmt.ago(f.mtime)) · \(f.owner):\(f.group) \(f.mode)")
-                .font(.system(size: 11)).foregroundStyle(Theme.text2).lineLimit(1)
+            if isNew {
+                Text("New file · not on the server until you save").font(.system(size: 11)).foregroundStyle(Theme.text2)
+            } else {
+                Text("\(Fmt.bytes(f.bytes)) · \(lines.count) lines · modified \(Fmt.ago(f.mtime)) · \(f.owner):\(f.group) \(f.mode)")
+                    .font(.system(size: 11)).foregroundStyle(Theme.text2).lineLimit(1)
+            }
             if let why = readOnlyReason(f) {
                 Label(why, systemImage: "lock.fill").font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.warn)
             }
@@ -252,6 +264,16 @@ struct FileEditorView: View {
 
     // MARK: loading and saving
 
+    private func startNew() {
+        file = FSFile(path: path, bytes: 0, mtime: "", mode: "-rw-r--r--", owner: "root", group: "root", sha256: nil,
+                      content: "", truncated: false, binary: false, editable: true, protected: nil, inUse: nil)
+        text = ""
+        lines = [""]
+        isNew = true
+        editing = true
+        loading = false
+    }
+
     private func load() async {
         loading = true
         error = nil
@@ -278,14 +300,14 @@ struct FileEditorView: View {
         saving = true
         defer { saving = false }
         let api = store.api(for: server)
-        struct Body: Encodable { let path: String; let content: String; let expectSha256: String }
+        struct Body: Encodable { let path: String; let content: String; let expectSha256: String; let create: Bool? }
         do {
             var sha = f.sha256 ?? ""
             if overwrite {
                 let fresh: FSFile = try await api.get("/v1/fs/read?path=\(fsQuery(path))", timeout: .seconds(60))
                 sha = fresh.sha256 ?? ""
             }
-            let data = try await api.send("PUT", "/v1/fs/write", Body(path: path, content: text, expectSha256: sha), timeout: .seconds(60))
+            let data = try await api.send("PUT", "/v1/fs/write", Body(path: path, content: text, expectSha256: sha, create: isNew ? true : nil), timeout: .seconds(60))
             let res = try JSON.decoder.decode(FSWriteResult.self, from: data)
             var nf = f
             nf.content = text
@@ -295,6 +317,7 @@ struct FileEditorView: View {
             file = nf
             lines = text.components(separatedBy: "\n")
             editing = false
+            isNew = false
             error = nil
             saved = "Saved" + (res.backup.map { " · previous version kept as \(($0 as NSString).lastPathComponent)" } ?? "")
             recomputeMatches(query)

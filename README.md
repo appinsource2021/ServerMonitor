@@ -167,6 +167,7 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys
   - **Edit** ile düzenleme moduna geçilir, **Save** ile kaydedilir. Agent önce `dosya.srvmon-bak-<tarih>` adıyla yedek alır (son 3 yedek tutulur), sonra dosyayı mod ve sahibini koruyarak atomik olarak yazar.
   - Dosya sen açtıktan sonra sunucuda değişmişse kaydetme reddedilir; uygulama **Reload** (kendi değişikliklerini at) veya **Overwrite anyway** (sunucudaki sürümü yedekleyip üstüne yaz) seçeneklerini sunar.
   - Sınırlar: 64 KB'tan büyük dosyalar ve sistem yolları salt okunurdur; 512 KB'tan büyük dosyaların yalnızca son 512 KB'ı gösterilir (büyük loglar için). İkili (binary) dosyalar gösterilmez.
+  - **Eklemek (+ düğmesi):** **New file** boş bir editör açar, kaydedince dosya oluşur. **New folder** klasör oluşturur. **Upload from Files** telefondaki Dosyalar uygulamasından bir veya birkaç dosya seçtirir; dosya SFTP ile sunucuya gider, agent güvenlik listesine göre denetleyip yerine koyar. Aynı adda dosya varsa üstüne yazmaz, önce silmen gerekir. Dosya başına 200 MB sınırı var.
   - Ekip üyeleri (relay) dosya listesini, içeriğini göremez ve silemez; bu özellik yalnızca SSH ile bağlanan admin içindir.
   - Tarama sunucuda düşük öncelikle çalışır ve 10 dakika boyunca saklanır.
   - **Stop scan:** Tarama sürerken basınca sunucudaki `du` ve `find` işlemleri hemen sonlandırılır. Sonra **Scan again** ile yeniden başlatabilirsin.

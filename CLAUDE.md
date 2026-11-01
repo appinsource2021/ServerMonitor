@@ -78,17 +78,20 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
   - `GET /v1/fs/read?path=` — text only (binary detected), up to 512 KB, tail for bigger files; `sha256` and `editable` only when the file can be edited.
   - `PUT /v1/fs/write` `{path, content, expect_sha256, create}` — 409 on a hash mismatch, backup `file.srvmon-bak-<ts>` (3 kept), atomic write keeping mode and owner, writes through symlinks.
   - `DELETE /v1/fs?path=&force=1` — recursive, returns `freed_bytes`; 409 when in use unless `force`; refuses mount points.
+  - `POST /v1/fs/mkdir` `{path}` — 409 if it exists, parent must exist.
+  - `POST /v1/fs/upload` — returns `{temp}` under `/var/lib/srvmon/upload/` (not `/tmp`: the unit has `PrivateTmp`); the app writes it over SFTP. Stale uploads older than a day are pruned.
+  - `POST /v1/fs/import` `{temp, path, overwrite}` — moves the upload into place (rename, copy across filesystems), 409 if the name exists unless `overwrite` (then backup, mode and owner kept).
 - Limits: edit up to **64 KB** (the content travels as one SSH command-line argument), 2000 entries per listing.
 - Deny list (write and delete, subtrees included): `/`, `/proc`, `/sys`, `/dev`, `/boot`, `/usr`, `/bin`, `/sbin`, `/lib*`, `/etc/srvmon`, `/usr/local/bin/srvmon-agent`, `/run/srvmon`. Delete also refuses every top-level directory and `/var/lib/docker`. `/proc`, `/sys`, `/dev` are not even listed.
 - `in_use` = bind mount of a container or working directory of a process (same idea as `protectedPaths` in `cleanup.go`).
-- iOS: `DiskUsageView` is a `List` (swipe to delete on folders and files, `DeleteSheet` asks to type a folder's name). `FileEditorView` views (line numbers, find), edits and saves; a 409 offers reload or overwrite.
+- iOS: `DiskUsageView` is a `List` (swipe or long-press to delete, `DeleteSheet` asks to type a folder's name; the `+` menu creates files and folders and uploads from the Files app over SFTP). `FileEditorView` views (line numbers, find), edits and saves; a 409 offers reload or overwrite.
 - Tests: `agent/fs_test.go` covers the deny list, listing, tail reads, conflict, backup, atomic write, delete and the relay 403.
 
 ## Open work
 1. Non-root connect mode for 208 (see above).
 2. Deploy the relay; Suleyman has not yet decided where it runs.
 3. Fix the Swift 6 concurrency warnings in `TerminalScreen.swift` (they do not break the build).
-4. File manager follow-ups if wanted: create folder, rename/move, upload and download, edit files over 64 KB (would need SFTP for the content).
+4. File manager follow-ups if wanted: rename/move, download to the phone, edit files over 64 KB (would need SFTP for the content).
 
 ## Folder notes
 - `_old/` holds the zips that were used to sync from a cloud session. It is safe to delete.
