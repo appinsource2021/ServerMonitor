@@ -240,7 +240,7 @@ struct DiskUsageView: View {
                   detail: detail, warning: inUseByPath[path].map { "In use: \($0)" })
         }
         .cardRow()
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) { deleteButton(target) }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) { swipeDelete(target) }
         .contextMenu { copyButton(path); deleteButton(target) }
     }
 
@@ -278,7 +278,7 @@ struct DiskUsageView: View {
                   warning: e.inUse.map { "In use: \($0)" })
         }
         .cardRow()
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) { deleteButton(target) }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) { swipeDelete(target) }
         .contextMenu { copyButton(e.path); deleteButton(target) }
     }
 
@@ -291,7 +291,7 @@ struct DiskUsageView: View {
                           warning: inUseByPath[f.path].map { "In use: \($0)" })
                 }
                 .cardRow()
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) { deleteButton(target) }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) { swipeDelete(target) }
                 .contextMenu { copyButton(f.path); deleteButton(target) }
             }
         } header: {
@@ -299,9 +299,16 @@ struct DiskUsageView: View {
         }
     }
 
+    /// Swipe button. Deliberately NOT `role: .destructive`: with that role the List
+    /// removes the row on tap, before anything is confirmed, and the next reload
+    /// then crashes on the mismatch between the list and the data.
+    private func swipeDelete(_ t: DeleteTarget) -> some View {
+        Button { pendingDelete = t } label: { Label("Delete…", systemImage: "trash") }
+            .tint(Theme.crit)
+    }
+
     private func deleteButton(_ t: DeleteTarget) -> some View {
         Button(role: .destructive) { pendingDelete = t } label: { Label("Delete…", systemImage: "trash") }
-            .tint(Theme.crit)
     }
 
     private func copyButton(_ path: String) -> some View {
