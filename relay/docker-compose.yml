@@ -1,0 +1,14 @@
+# Put this behind your existing reverse proxy (Nginx/Traefik/Caddy) as https://monitor.appinsource.eu
+# Only the proxy needs to reach port 8080; do not publish it to the internet.
+services:
+  srvmon-relay:
+    build: .
+    restart: unless-stopped
+    environment:
+      RELAY_ADMIN_TOKEN: ${RELAY_ADMIN_TOKEN:?set a long random token in .env}
+    volumes:
+      - relay-data:/data
+    ports:
+      - "127.0.0.1:8080:8080"
+volumes:
+  relay-data:

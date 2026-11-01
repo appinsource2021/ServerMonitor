@@ -1,0 +1,50 @@
+# Generate the Xcode project with:  brew install xcodegen && xcodegen
+name: ServerMonitor
+options:
+  bundleIdPrefix: eu.appinsource
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    DEVELOPMENT_TEAM: ""            # set your Apple Team ID here or in Xcode
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  Citadel:
+    url: https://github.com/orlandos-nl/Citadel.git
+    from: "0.12.0"
+targets:
+  ServerMonitor:
+    type: application
+    platform: iOS
+    sources:
+      - path: ServerMonitor
+        excludes:
+          - "Resources/Agent/**"
+      - path: ServerMonitor/Resources/Agent
+        type: folder              # copied as-is into the app bundle as "Agent/"
+        buildPhase: resources
+    dependencies:
+      - package: Citadel
+    entitlements:
+      path: ServerMonitor/ServerMonitor.entitlements
+      properties: {}   # add aps-environment: development once a paid Apple team is selected
+    info:
+      path: ServerMonitor/Info.plist
+      properties:
+        CFBundleDisplayName: Server Monitor
+        UILaunchScreen: {}
+        UIUserInterfaceStyle: Dark
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIBackgroundModes: [remote-notification]
+        NSFaceIDUsageDescription: Unlock Server Monitor, which holds SSH access to your servers.
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: eu.appinsource.servermonitor
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor

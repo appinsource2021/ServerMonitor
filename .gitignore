@@ -1,0 +1,10 @@
+_old/
+.DS_Store
+xcuserdata/
+*.xcuserstate
+agent/dist/
+DerivedData/
+.build/
+
+# Built by `make ios-resources` (needs Go); not committed
+ios/ServerMonitor/Resources/Agent/
