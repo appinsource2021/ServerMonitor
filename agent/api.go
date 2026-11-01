@@ -65,6 +65,10 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("PUT /v1/members", s.putMembers)
 	m.HandleFunc("GET /v1/relay", s.getRelay)
 	m.HandleFunc("PUT /v1/relay", s.putRelay)
+	m.HandleFunc("GET /v1/fs/list", s.fsList)
+	m.HandleFunc("GET /v1/fs/read", s.fsRead)
+	m.HandleFunc("PUT /v1/fs/write", s.fsWrite)
+	m.HandleFunc("DELETE /v1/fs", s.fsDelete)
 	return limitBody(m)
 }
 
@@ -83,7 +87,11 @@ func TokenAuth(store *ConfigStore, next http.Handler) http.Handler {
 
 func limitBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+		limit := int64(64 << 10)
+		if r.URL.Path == "/v1/fs/write" { // file content travels in the body
+			limit = fsMaxBody
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, limit)
 		next.ServeHTTP(w, r)
 	})
 }

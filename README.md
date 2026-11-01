@@ -159,6 +159,15 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys
   - **Docker:** İmajlar, build cache, volume'lar, container logları ve container katmanları ayrı ayrı gösterilir. Her birinde "reclaimable" (silinebilir) miktarı yazar.
   - **Folders:** Klasörlerin boyutu büyükten küçüğe sıralanır. Bir klasöre dokununca içine inersin.
   - **Largest files:** 50 MB'tan büyük dosyalar listelenir.
+  - **Files:** Bulunduğun klasördeki dosyalar boyut, değiştirilme zamanı, sahip ve izinleriyle listelenir. Bir dosyaya dokununca açılır (aşağıda).
+  - **Silmek:** Klasör veya dosya satırını sola kaydırıp **Delete**'e bas. Onay ekranı boyutu gösterir ve silmenin kalıcı olduğunu söyler; klasör silerken klasörün adını yazman istenir. Bir container'ın mount ettiği veya çalışan bir sürecin içinde bulunduğu yollar kırmızı **In use** uyarısıyla işaretlenir.
+  - Güvenlik için silinemeyen yerler: `/`, `/proc`, `/sys`, `/dev`, `/boot`, `/usr`, `/bin`, `/sbin`, `/lib*`, `/etc/srvmon`, `/run/srvmon`, `/var/lib/docker` ve bütün üst düzey klasörler (`/var`, `/etc`, `/home` gibi; içlerindeki öğeler silinebilir). Mount noktaları da silinmez.
+- **Dosya görüntüleme ve düzenleme (Files listesinde bir dosyaya dokun):**
+  - Dosya satır numaralarıyla gösterilir. Büyüteç ile arama yapılır; eşleşmeler sarı işaretlenir, ok tuşlarıyla aralarında gezilir.
+  - **Edit** ile düzenleme moduna geçilir, **Save** ile kaydedilir. Agent önce `dosya.srvmon-bak-<tarih>` adıyla yedek alır (son 3 yedek tutulur), sonra dosyayı mod ve sahibini koruyarak atomik olarak yazar.
+  - Dosya sen açtıktan sonra sunucuda değişmişse kaydetme reddedilir; uygulama **Reload** (kendi değişikliklerini at) veya **Overwrite anyway** (sunucudaki sürümü yedekleyip üstüne yaz) seçeneklerini sunar.
+  - Sınırlar: 64 KB'tan büyük dosyalar ve sistem yolları salt okunurdur; 512 KB'tan büyük dosyaların yalnızca son 512 KB'ı gösterilir (büyük loglar için). İkili (binary) dosyalar gösterilmez.
+  - Ekip üyeleri (relay) dosya listesini, içeriğini göremez ve silemez; bu özellik yalnızca SSH ile bağlanan admin içindir.
   - Tarama sunucuda düşük öncelikle çalışır ve 10 dakika boyunca saklanır.
   - **Stop scan:** Tarama sürerken basınca sunucudaki `du` ve `find` işlemleri hemen sonlandırılır. Sonra **Scan again** ile yeniden başlatabilirsin.
 - **Smart cleanup (Disk ekranında):**
@@ -168,7 +177,7 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys
   - **Stop:** Temizlik sürerken alttaki butona basınca, o an işlenen öğe bitince temizlik durur. Kalan öğeler "not run, stopped by user" olarak gösterilir. Bir öğe yarıda kesilmez, böylece hiçbir şey yarım kalmaz.
   - Tarama sürerken ne kadar zamandır çalıştığı ("Running for …") ve başlangıç saati gösterilir. 10 dakikayı geçerse uyarı çıkar; sunucu taramayı en geç 15 dakikada kendisi keser.
   - **Stop** telefonda beklemeyi her zaman hemen bitirir. Sunucuya ulaşılamazsa bunu ekranda söyler.
-  - Disk analizi ve temizlikteki Stop butonları için sunucuda agent 0.3.2 gerekir (··· → **Update agent**).
+  - Disk analizi ve temizlikteki Stop butonları için sunucuda agent 0.3.2, dosya listesi ve düzenleme için 0.3.3 gerekir (··· → **Update agent**).
 - **Terminal (sunucu detayında):** Gerçek bir SSH terminali (xterm-256color). `htop` ve `vim` gibi tam ekran programlar çalışır. Altta hazır komut butonları var (`docker ps`, `df -h`, `free -h`, `htop`, `journalctl -f`, Ctrl-C…). Bağlantı koparsa **Reconnect**'e bas. Terminal sadece SSH ile bağlanılan sunucularda açılır; ekip üyeleri (relay) terminal kullanamaz.
 - **··· menüsü (sunucu detayında):**
   - **Send test notification:** Test bildirimi gönderir.
@@ -296,6 +305,10 @@ location / {
 | Uygulama açılmıyor, "Untrusted Developer" | **Ayarlar → Genel → VPN ve Cihaz Yönetimi → Güven** |
 | 7 gün sonra uygulama açılmıyor | Ücretsiz hesap imzasının süresi doldu. Xcode'dan tekrar **Run**'a bas. |
 | Health check / Disk / Cleanup: "older agent" | Sunucudaki agent 0.3.0'dan eski. **··· → Update agent** |
+| Disk ekranında "Browsing files needs agent 0.3.3" | Sunucudaki agent eski. **··· → Update agent** |
+| Silerken "protected path" | O yol güvenlik listesinde (Bölüm 7, Disk analizi). Gerekiyorsa Terminal'den sil. |
+| Silerken "contains a mount point" | Klasörün içinde başka bir dosya sistemi bağlı. Önce o mount'u kaldır ya da alt klasörleri tek tek sil. |
+| Kaydederken "The file changed on the server" | Dosya sen açtıktan sonra değişmiş. **Reload** ile yeni sürümü gör veya **Overwrite anyway** ile üstüne yaz; eski sürüm `.srvmon-bak-` yedeğinde kalır. |
 | Smart cleanup ev dizinlerindeki önbellekleri silemiyor | Agent'ın systemd servisinde `ProtectHome=read-only` var. 0.3.0 ile kurulan servis bu satırı kaldırıyor; **Update agent** yap. |
 | Xcode'da "Download Metal Toolchain" ya da "SwiftTermBuildInfoPlugin" uyarısı | SwiftTerm paketi 1.10.1'e sabitlenmeli (proje dosyasında öyle). Xcode'da **File → Packages → Reset Package Caches** yap. |
 | Xcode'da "Replace ServerMonitor?" sorusu | Telefonda eski sürüm çalışıyor. **Replace**'e bas. |
@@ -341,6 +354,7 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys   # iPhone key'i de kaldı
 - **Host key kontrolü:** İlk bağlantıda sunucunun host key'i kaydedilir. Sonradan değişirse uygulama bağlanmayı reddeder.
 - **Ekip istekleri imzalanır.** Her üyenin telefonu kendi Ed25519 key'iyle her isteği imzalar. Agent bu imzayı, adminin SSH üzerinden gönderdiği üye listesiyle karşılaştırır. Relay ele geçirilse bile kimse yetkisi olmayan bir şeyi göremez veya değiştiremez. Eski bir isteği tekrar göndermek de engellenir.
 - **Loglar ve servisler sadece admin rolüne açıktır**, çünkü loglarda şifre veya müşteri verisi bulunabilir.
+- **Dosya yöneticisi yalnızca SSH ile bağlanan admin içindir.** Relay üzerinden gelen üyeler dosya isteklerinde 403 alır. Sistem klasörleri yazma ve silmeye kapalıdır; her kayıttan önce yedek alınır ve yazma atomiktir (yarım dosya kalmaz).
 - **Uygulama kilidi:** Uygulama Face ID ile kilitlenir. **Settings → Security** bölümünden kapatılabilir.
 
 ## 13. Marka yazımı: appinsource

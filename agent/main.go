@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-var version = "0.3.2"
+var version = "0.3.3"
 
 const defaultConfigPath = "/etc/srvmon/config.json"
 
@@ -183,7 +183,7 @@ func runAPIClient(args []string, stdin io.Reader, stdout, stderr io.Writer) int 
 	var body io.Reader
 	if len(rest) > 2 {
 		if rest[2] == "-" {
-			b, err := io.ReadAll(io.LimitReader(stdin, 64<<10))
+			b, err := io.ReadAll(io.LimitReader(stdin, 1<<20))
 			if err != nil {
 				fmt.Fprintln(stderr, err)
 				return 1

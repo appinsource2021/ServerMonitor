@@ -383,3 +383,60 @@ struct CleanupRunResponse: Decodable {
     let results: [CleanupResult]
     let freedBytes: UInt64
 }
+
+// MARK: - File manager (agent ≥ 0.3.3)
+
+struct FSEntry: Decodable, Identifiable, Hashable {
+    let name: String
+    let path: String
+    let type: String // dir, file, symlink, other
+    let bytes: UInt64
+    let mtime: String
+    let mode: String
+    let owner: String
+    let group: String
+    let target: String?
+    let inUse: String?
+    var id: String { path }
+    var isDir: Bool { type == "dir" }
+}
+
+struct FSListing: Decodable {
+    let path: String
+    let parent: String?
+    let entries: [FSEntry]
+    let truncated: Bool
+    let protected: String?
+    let inUse: String?
+}
+
+struct FSFile: Decodable {
+    var path: String
+    var bytes: UInt64
+    var mtime: String
+    var mode: String
+    var owner: String
+    var group: String
+    var sha256: String?
+    var content: String
+    var truncated: Bool
+    var binary: Bool
+    var editable: Bool
+    var protected: String?
+    var inUse: String?
+}
+
+struct FSWriteResult: Decodable {
+    let path: String
+    let bytes: UInt64
+    let mtime: String
+    let sha256: String
+    let backup: String?
+    let created: Bool?
+}
+
+struct FSDeleteResult: Decodable {
+    let path: String
+    let freedBytes: UInt64
+    let entries: Int
+}

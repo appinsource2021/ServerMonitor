@@ -51,7 +51,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Entitlements stay **empty**. A personal Apple team cannot use Push Notifications, so APNs stays unused until there is a paid team.
 
 ## Versions
-- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.3.2** now.
+- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.3.3** now.
 - After agent changes:
   1. Bump both places.
   2. Run `make ios-resources`.
@@ -72,26 +72,23 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
   - The sha in the briefing refers to the old 0.2.1 binary.
 - Destructive actions on a real server need Suleyman's explicit OK.
 
+## File manager (agent 0.3.3, `agent/fs.go`)
+- Routes, admin over SSH only (HandleMember never routes `/v1/fs`, so relay members get 403):
+  - `GET /v1/fs/list?path=` — entries with type, size, mtime, owner, mode, symlink target and `in_use`.
+  - `GET /v1/fs/read?path=` — text only (binary detected), up to 512 KB, tail for bigger files; `sha256` and `editable` only when the file can be edited.
+  - `PUT /v1/fs/write` `{path, content, expect_sha256, create}` — 409 on a hash mismatch, backup `file.srvmon-bak-<ts>` (3 kept), atomic write keeping mode and owner, writes through symlinks.
+  - `DELETE /v1/fs?path=&force=1` — recursive, returns `freed_bytes`; 409 when in use unless `force`; refuses mount points.
+- Limits: edit up to **64 KB** (the content travels as one SSH command-line argument), 2000 entries per listing.
+- Deny list (write and delete, subtrees included): `/`, `/proc`, `/sys`, `/dev`, `/boot`, `/usr`, `/bin`, `/sbin`, `/lib*`, `/etc/srvmon`, `/usr/local/bin/srvmon-agent`, `/run/srvmon`. Delete also refuses every top-level directory and `/var/lib/docker`. `/proc`, `/sys`, `/dev` are not even listed.
+- `in_use` = bind mount of a container or working directory of a process (same idea as `protectedPaths` in `cleanup.go`).
+- iOS: `DiskUsageView` is a `List` (swipe to delete on folders and files, `DeleteSheet` asks to type a folder's name). `FileEditorView` views (line numbers, find), edits and saves; a 409 offers reload or overwrite.
+- Tests: `agent/fs_test.go` covers the deny list, listing, tail reads, conflict, backup, atomic write, delete and the relay 403.
+
 ## Open work
-1. **File manager (next feature, agreed in principle).** Extend the Disk drill-down into a real file browser:
-   - **Agent routes:**
-     - `GET /v1/fs/list?path=` — dirs and files with size, mtime, owner and mode.
-     - `GET /v1/fs/read?path=` — text only, size-capped, tail for big logs, binary detection.
-     - `PUT /v1/fs/write` — takes the expected mtime/sha256 and refuses on conflict. Writes a backup `file.srvmon-bak-<ts>` first, then writes atomically (temp file plus rename, keeping mode and owner).
-     - `DELETE /v1/fs?path=` — recursive for directories; returns the freed bytes.
-   - **Safety:**
-     - Admin over SSH only. Relay members get 403.
-     - Deny list: `/`, `/proc`, `/sys`, `/dev`, `/boot`, `/usr`, `/bin`, `/sbin`, `/lib*`, `/etc/srvmon`, `/usr/local/bin/srvmon-agent`, `/run/srvmon`.
-     - Mark paths that a container mounts, or that a running process uses (reuse the in-use logic in `cleanup.go`), with a red warning.
-     - Confirm a directory delete by typing its name.
-     - Show the size before deleting, and say that deletes are permanent.
-   - **iOS:**
-     - Files listed in `DiskUsageView`, with swipe to delete.
-     - A text viewer/editor screen (monospaced, search, save with conflict handling).
-   - Add agent tests for the deny list, conflict detection, backup and atomic write.
-2. Non-root connect mode for 208 (see above).
-3. Deploy the relay; Suleyman has not yet decided where it runs.
-4. Fix the Swift 6 concurrency warnings in `TerminalScreen.swift` (they do not break the build).
+1. Non-root connect mode for 208 (see above).
+2. Deploy the relay; Suleyman has not yet decided where it runs.
+3. Fix the Swift 6 concurrency warnings in `TerminalScreen.swift` (they do not break the build).
+4. File manager follow-ups if wanted: create folder, rename/move, upload and download, edit files over 64 KB (would need SFTP for the content).
 
 ## Folder notes
 - `_old/` holds the zips that were used to sync from a cloud session. It is safe to delete.
