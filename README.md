@@ -159,8 +159,8 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys
   - **Docker:** İmajlar, build cache, volume'lar, container logları ve container katmanları ayrı ayrı gösterilir. Her birinde "reclaimable" (silinebilir) miktarı yazar.
   - **Folders:** Klasörlerin boyutu büyükten küçüğe sıralanır. Bir klasöre dokununca içine inersin.
   - **Largest files:** 50 MB'tan büyük dosyalar listelenir.
-  - **Files:** Bulunduğun klasördeki dosyalar boyut, değiştirilme zamanı, sahip ve izinleriyle listelenir. Bir dosyaya dokununca açılır (aşağıda).
-  - **Silmek:** Klasör veya dosya satırını sola kaydırıp **Delete**'e bas. Onay ekranı boyutu gösterir ve silmenin kalıcı olduğunu söyler; klasör silerken klasörün adını yazman istenir. Bir container'ın mount ettiği veya çalışan bir sürecin içinde bulunduğu yollar kırmızı **In use** uyarısıyla işaretlenir.
+  - **Files:** Bulunduğun klasördeki dosyalar türüne göre bir rozetle (TSX, PDF, PNG…), boyut, değiştirilme zamanı, sahip ve izinleriyle listelenir. Bir dosyaya dokununca açılır (aşağıda).
+  - **Silmek:** Klasör veya dosya satırını sola kaydır ya da uzun basıp **Delete…**'e bas. Onay ekranı boyutu gösterir ve silmenin kalıcı olduğunu söyler; klasör silerken klasörün adını yazman istenir. Bir container'ın mount ettiği veya çalışan bir sürecin içinde bulunduğu yollar kırmızı **In use** uyarısıyla işaretlenir.
   - Güvenlik için silinemeyen yerler: `/`, `/proc`, `/sys`, `/dev`, `/boot`, `/usr`, `/bin`, `/sbin`, `/lib*`, `/etc/srvmon`, `/run/srvmon`, `/var/lib/docker` ve bütün üst düzey klasörler (`/var`, `/etc`, `/home` gibi; içlerindeki öğeler silinebilir). Mount noktaları da silinmez.
 - **Dosya görüntüleme ve düzenleme (Files listesinde bir dosyaya dokun):**
   - Dosya satır numaralarıyla gösterilir. Büyüteç ile arama yapılır; eşleşmeler sarı işaretlenir, ok tuşlarıyla aralarında gezilir.

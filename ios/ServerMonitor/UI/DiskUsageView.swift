@@ -98,7 +98,9 @@ struct DiskUsageView: View {
                     .font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.crit)
             }
         }
-        .padding(.top, 4)
+        // the inset-grouped cell clips its rounded corners: keep the first and last
+        // lines well away from the top and bottom edges
+        .padding(.vertical, 14)
     }
 
     private func sectionHeader(_ text: String, trailing: String? = nil) -> some View {
@@ -107,7 +109,7 @@ struct DiskUsageView: View {
             if let trailing { Text(trailing).font(Theme.mono(12)).foregroundStyle(Theme.text2) }
         }
         .textCase(nil)
-        .padding(.horizontal, -4)
+        .listRowInsets(EdgeInsets(top: 10, leading: 0, bottom: 6, trailing: 0))
     }
 
     // Docker usually explains "where did the space go" on a single-app server
@@ -189,16 +191,14 @@ struct DiskUsageView: View {
     }
 
     private func folderRow(name: String, path: String, bytes: UInt64?, total: UInt64?, detail: String?) -> some View {
-        NavigationLink { DiskUsageView(server: server, path: path) } label: {
+        let target = DeleteTarget(path: path, name: name, isDir: true, bytes: bytes, inUse: inUseByPath[path])
+        return NavigationLink { DiskUsageView(server: server, path: path) } label: {
             FSRow(icon: "folder.fill", iconColor: Theme.accent.opacity(0.8), name: name, bytes: bytes, total: total,
                   detail: detail, warning: inUseByPath[path].map { "In use: \($0)" })
         }
         .cardRow()
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
-                pendingDelete = DeleteTarget(path: path, name: name, isDir: true, bytes: bytes, inUse: inUseByPath[path])
-            } label: { Label("Delete", systemImage: "trash") }
-        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) { deleteButton(target) }
+        .contextMenu { copyButton(path); deleteButton(target) }
     }
 
     @ViewBuilder private var filesSection: some View {
@@ -222,42 +222,47 @@ struct DiskUsageView: View {
             sectionHeader("Files", trailing: n.map { "\($0)" })
         } footer: {
             if listing != nil {
-                Text("Tap a file to view or edit it. Swipe left to delete.").font(.system(size: 11)).foregroundStyle(Theme.text3)
+                Text("Tap a file to view or edit it. Swipe left or long-press to delete.").font(.system(size: 11)).foregroundStyle(Theme.text3)
             }
         }
     }
 
     private func fileRow(_ e: FSEntry) -> some View {
-        NavigationLink { FileEditorView(server: server, path: e.path) } label: {
-            FSRow(icon: e.type == "symlink" ? "link" : "doc.fill", iconColor: Theme.text3, name: e.name, bytes: e.bytes, total: nil,
+        let target = DeleteTarget(path: e.path, name: e.name, isDir: false, bytes: e.bytes, inUse: e.inUse)
+        return NavigationLink { FileEditorView(server: server, path: e.path) } label: {
+            FSRow(icon: "link", iconColor: Theme.text3, fileName: e.type == "symlink" ? nil : e.name, name: e.name, bytes: e.bytes, total: nil,
                   detail: [Fmt.ago(e.mtime), e.owner, e.mode].filter { !$0.isEmpty }.joined(separator: " · "),
                   warning: e.inUse.map { "In use: \($0)" })
         }
         .cardRow()
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
-                pendingDelete = DeleteTarget(path: e.path, name: e.name, isDir: false, bytes: e.bytes, inUse: e.inUse)
-            } label: { Label("Delete", systemImage: "trash") }
-        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) { deleteButton(target) }
+        .contextMenu { copyButton(e.path); deleteButton(target) }
     }
 
     private func largestSection(_ files: [DiskEntry]) -> some View {
         Section {
             ForEach(files.prefix(15)) { f in
+                let target = DeleteTarget(path: f.path, name: f.name, isDir: false, bytes: f.bytes, inUse: inUseByPath[f.path])
                 NavigationLink { FileEditorView(server: server, path: f.path) } label: {
-                    FSRow(icon: "doc.fill", iconColor: Theme.text3, name: f.name, bytes: f.bytes, total: nil, detail: f.path,
+                    FSRow(icon: "doc.fill", iconColor: Theme.text3, fileName: f.name, name: f.name, bytes: f.bytes, total: nil, detail: f.path,
                           warning: inUseByPath[f.path].map { "In use: \($0)" })
                 }
                 .cardRow()
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button(role: .destructive) {
-                        pendingDelete = DeleteTarget(path: f.path, name: f.name, isDir: false, bytes: f.bytes, inUse: inUseByPath[f.path])
-                    } label: { Label("Delete", systemImage: "trash") }
-                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) { deleteButton(target) }
+                .contextMenu { copyButton(f.path); deleteButton(target) }
             }
         } header: {
             sectionHeader("Largest files", trailing: "over 50 MB")
         }
+    }
+
+    private func deleteButton(_ t: DeleteTarget) -> some View {
+        Button(role: .destructive) { pendingDelete = t } label: { Label("Delete…", systemImage: "trash") }
+            .tint(Theme.crit)
+    }
+
+    private func copyButton(_ path: String) -> some View {
+        Button { UIPasteboard.general.string = path } label: { Label("Copy path", systemImage: "doc.on.doc") }
     }
 
     private func note(_ text: String) -> some View {
@@ -458,6 +463,7 @@ struct DiskUsageView: View {
 struct FSRow: View {
     let icon: String
     let iconColor: Color
+    var fileName: String? = nil   // shows a type badge (TSX, PDF…) instead of the symbol
     let name: String
     var bytes: UInt64? = nil
     var total: UInt64? = nil
@@ -468,7 +474,11 @@ struct FSRow: View {
         let share = (bytes != nil && (total ?? 0) > 0) ? Double(bytes!) / Double(total!) : nil
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
-                Image(systemName: icon).foregroundStyle(iconColor).font(.system(size: 14)).frame(width: 18)
+                if let fileName {
+                    FileBadge(name: fileName)
+                } else {
+                    Image(systemName: icon).foregroundStyle(iconColor).font(.system(size: 15)).frame(width: 30, height: 24)
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(name).font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.text).lineLimit(1).truncationMode(.middle)
                     if let detail, !detail.isEmpty {
