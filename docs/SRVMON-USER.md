@@ -60,6 +60,26 @@ Başka bir iPhone'u aynı sunuculara bağlamak için script gerekmez: bağlı te
 
 Scripti **tekrar çalıştırmak güvenlidir**: kullanıcı, key'ler ve ayar dosyası korunur. Agent güncellemesi de böyle yapılır: yeni agent dosyasını `/tmp/srvmon-agent` olarak kopyala, scripti tekrar çalıştır. Uygulama sürüm eskiyince sunucu kartında sarı bir şerit gösterir.
 
+## Agent'ı güncellemek
+
+Uygulama yeni bir agent taşıdığında sunucu kartında sarı **Agent update needed** şeridi çıkar. `srvmon` ile bağlı sunucuda uygulama root olmadığı için güncellemeyi sen yaparsın; kurulumla aynı adımlar:
+
+1. Uygulamada Servers → **+** → User `srvmon` → **Server setup script**. **Share binary** ile yeni dosyayı al, **Copy script** ile scripti al (içinde yeni sürümün sha256'sı var).
+2. Sunucuya kopyala: `scp srvmon-agent-linux-amd64 root@SUNUCU:/tmp/srvmon-agent`. Sonra scripti root olarak çalıştır. Script dosyayı doğrular, yerine koyar, servisi yeniden başlatır, `OK` yazar. Kullanıcı, key ve ayar dosyası olduğu gibi kalır.
+3. Uygulamada sunucuyu aç; şerit birkaç saniye içinde kaybolur.
+
+Scriptin agent kısmı, elle yapmak istersen:
+
+```bash
+echo "SHA256  /tmp/srvmon-agent" | sha256sum -c -
+install -m 755 /tmp/srvmon-agent /usr/local/bin/srvmon-agent.new
+mv -f /usr/local/bin/srvmon-agent.new /usr/local/bin/srvmon-agent
+rm -f /tmp/srvmon-agent
+systemctl restart srvmon-agent
+/usr/local/bin/srvmon-agent version
+sudo -u srvmon /usr/local/bin/srvmon-agent api GET /v1/health | head -n1
+```
+
 ## Birden fazla iPhone
 
 Her telefonun kendi key'i vardır. İkinci telefon için scripti tekrar çalıştırmak gerekmez: yeni telefonda Settings → **This iPhone's SSH key** ekranındaki QR kodu, bağlı telefonun kamerasıyla okut. Bağlı telefon key'i seçtiğin sunuculardaki `authorized_keys` dosyasına ekler (`srvmon` kendi dosyasına yazabildiği için root gerekmez) ve yeni telefona sunucu listesini QR ile verir. Erişimi kesmek: bağlı telefonda Settings → Other iPhones → **Revoke**.

@@ -369,6 +369,33 @@ srvmon-agent api GET /v1/relay            # relay bağlantı durumu
 cat /etc/srvmon/config.json               # ayarlar (APNs key ve üyeler dahil; sadece root okuyabilir)
 ```
 
+### Agent'ı güncellemek
+
+Uygulama her yeni sürümünde içinde yeni bir agent taşır. Sunucudaki agent eskiyse Servers ekranındaki kartta sarı **Agent update needed** şeridi çıkar. Güncelleme iki türlü olur:
+
+**Root ile bağlı sunucular: otomatik.** Şeritteki **Update now**'a (ya da ··· → **Update agent**) bas. Uygulama yeni dosyayı SFTP ile yükler, sha256 ile doğrular, kurulum scriptini root olarak çalıştırır; ayar dosyası korunur, servis yeniden başlar. Yaklaşık 10 saniye.
+
+**`srvmon` ile bağlı sunucular: elle.** Uygulama bu sunucuda root değildir ve agent dosyasının yolu koruma listesindedir; şerit düğmesiz çıkar. Güncelleme, kurulumla aynı üç adımdır:
+
+1. **Yeni dosyayı al.** Uygulamada Servers → **+** → User `srvmon` → **Server setup script** ekranındaki **Share binary** ile (Mac'e AirDrop). Ya da geliştirici Mac'inde hazır: `ios/ServerMonitor/Resources/Agent/srvmon-agent-linux-amd64` (doğru sha256 yanındaki `SHA256SUMS` dosyasında).
+2. **Sunucuya kopyala ve scripti çalıştır.** Yönetim penceresi açıkken:
+   ```bash
+   scp srvmon-agent-linux-amd64 root@SUNUCU:/tmp/srvmon-agent
+   ```
+   Sonra aynı ekrandan **Copy script** ile aldığın scripti sunucuda root olarak çalıştır. Script o sürümün sha256'sını taşır: dosyayı doğrular, `/usr/local/bin/srvmon-agent` olarak kurar, servisi yeniden başlatır ve `OK` yazar. Kullanıcıya, key'e ve `/etc/srvmon/config.json` dosyasına dokunmaz. Scriptin yaptığının kısa hali, elle yapmak istersen:
+   ```bash
+   echo "SHA256  /tmp/srvmon-agent" | sha256sum -c -                    # SHA256: SHA256SUMS dosyasındaki değer
+   install -m 755 /tmp/srvmon-agent /usr/local/bin/srvmon-agent.new
+   mv -f /usr/local/bin/srvmon-agent.new /usr/local/bin/srvmon-agent     # tek hamlede değişir, yarım dosya kalmaz
+   rm -f /tmp/srvmon-agent
+   systemctl restart srvmon-agent
+   /usr/local/bin/srvmon-agent version                                   # yeni sürüm
+   sudo -u srvmon /usr/local/bin/srvmon-agent api GET /v1/health | head -n1   # HTTP 200
+   ```
+3. **Kontrol.** Uygulamada sunucuyu aç; birkaç saniye içinde sarı şerit kaybolur (sürüm `/v1/summary` cevabından okunur).
+
+Alıştırma için aynı sürümle de çalıştırabilirsin: script aynı dosyayı tekrar kurar, hiçbir şey bozulmaz.
+
 Agent'ı kaldırmak için önerilen yol uygulamada **··· → Remove server → Remove and uninstall agent**. Elle kaldırmak için:
 
 ```bash
