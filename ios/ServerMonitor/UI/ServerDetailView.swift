@@ -213,11 +213,13 @@ struct ServerActionsMenu: View, Equatable {
                     } catch { message = friendlyError(error) }
                 }
             } label: { Label("Container actions…", systemImage: "switch.2") }
-            Button {
-                let inst = Installer(input: NewServerInput(host: server.host, username: server.username), store: store, existing: server)
-                updating = inst
-                Task { await inst.run() }
-            } label: { Label("Update agent", systemImage: "arrow.down.circle") }
+            if server.managesAgent {
+                Button {
+                    let inst = Installer(input: NewServerInput(host: server.host, username: server.username), store: store, existing: server)
+                    updating = inst
+                    Task { await inst.run() }
+                } label: { Label("Update agent", systemImage: "arrow.down.circle") }
+            }
             Divider()
             Button(role: .destructive) { showRemove = true } label: { Label("Remove server", systemImage: "trash") }
         } label: {
@@ -225,8 +227,10 @@ struct ServerActionsMenu: View, Equatable {
         }
         .accessibilityLabel("Server actions")
         .confirmationDialog("Remove \(server.name)?", isPresented: $showRemove, titleVisibility: .visible) {
-            Button("Remove and uninstall agent", role: .destructive) {
-                Task { await store.remove(server, uninstall: true); dismiss() }
+            if server.managesAgent {
+                Button("Remove and uninstall agent", role: .destructive) {
+                    Task { await store.remove(server, uninstall: true); dismiss() }
+                }
             }
             Button("Remove from app only", role: .destructive) {
                 Task { await store.remove(server, uninstall: false); dismiss() }

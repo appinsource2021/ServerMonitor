@@ -51,7 +51,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Entitlements stay **empty**. A personal Apple team cannot use Push Notifications, so APNs stays unused until there is a paid team.
 
 ## Versions
-- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.3.4** now.
+- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.3.5** now.
 - After agent changes:
   1. Bump both places.
   2. Run `make ios-resources`.
@@ -68,9 +68,8 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Container actions are blocked when `allow_actions=false` in the agent config. The app offers "Turn on container actions".
 - Team members (relay) never see logs unless they are admins. Scopes are globs over container name, image or compose project.
 - Server 217.160.39.208 (the MCP dev server) has root login gated by TOTP plus a dashboard window.
-  - Plan: a non-root `srvmon` user with `socket_group "srvmon"`; see `docs/BRIEFING-monitoring-user.md`.
-  - The app does not yet have a mode for "connect as non-root to an existing agent" (promised, still to do).
-  - The sha in the briefing refers to the old 0.2.1 binary.
+  - Solution: a non-root `srvmon` user with `socket_group "srvmon"`; the ready-to-paste script is in `docs/BRIEFING-monitoring-user.md` (binary 0.3.5, sha inside). Whether it has been run on 208 is unknown.
+  - The app side exists since 0.3.5, see "Non-root servers" below.
 - Destructive actions on a real server need Suleyman's explicit OK.
 
 ## File manager (agent 0.3.3, `agent/fs.go`)
@@ -88,6 +87,14 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - iOS: `DiskUsageView` is a `List` (swipe or long-press to delete, `DeleteSheet` asks to type a folder's name; the `+` menu creates files and folders and uploads from the Files app over SFTP). `FileEditorView` views (line numbers, find), edits and saves; a 409 offers reload or overwrite.
 - Tests: `agent/fs_test.go` covers the deny list, listing, tail reads, conflict, backup, atomic write, delete and the relay 403.
 
+## Non-root servers (app 0.3.5, "attach" mode)
+- `ServerRecord.externalAgent == true` marks a server the app logs into as a non-root user; `managesAgent` is false then (also for relay servers).
+- `Installer.run`: the probe also runs `srvmon-agent api GET /v1/health` as the login user. uid ≠ 0 and `HTTP 200` → attach: upload/install steps are skipped, health is checked, the record is saved with `externalAgent`. uid ≠ 0 without an answering agent → error naming the briefing. Root behaves as before.
+- Hidden for such servers: ··· → Update agent, "Remove and uninstall agent", and the button on the yellow update strip (the strip only says to update on the server).
+- `AddServerView`: a non-root User shows a banner, hides the "Container actions" toggle (the config is the admin's) and the button reads "Connect to existing agent".
+- Agent 0.3.5: `fsPrepareUploadDir` makes `/var/lib/srvmon/upload` `root:<socket_group> 0770` so the SSH user can write uploads over SFTP; `fsImport` gives a new file the owner of its folder (an upload by `srvmon` no longer lands as `srvmon`).
+- Everything else (health check, disk, file manager, terminal, relay enrol) goes through the agent API or the user's own shell and works unchanged. The agent runs as root, so the non-root key holder has the full API, file edits included.
+
 ## Server screen (agent 0.3.4)
 - `ServerDetailView` no longer has Containers/Services tabs. Below the CPU chart sit two cards:
   - `DockerCard` (`UI/ContainersScreen.swift`) → `ContainersScreen`: engine state, running/stopped/problems/images, the containers' total CPU (share of the host) and memory, and a last-hour chart of container CPU against host CPU. The screen lists the containers with the filter; its first row is `docker.service` with the engine's journal.
@@ -97,10 +104,12 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - The filter helper is `TextFilter.matches` (moved out of `ServerDetailView`).
 
 ## Open work
-1. Non-root connect mode for 208 (see above).
-2. Deploy the relay; Suleyman has not yet decided where it runs.
-3. Fix the Swift 6 concurrency warnings in `TerminalScreen.swift` (they do not break the build).
-4. File manager follow-ups if wanted: rename/move, download to the phone, edit files over 64 KB (would need SFTP for the content).
+1. Deploy the relay; Suleyman has not yet decided where it runs.
+2. Fix the Swift 6 concurrency warnings in `TerminalScreen.swift` (they do not break the build).
+3. File manager follow-ups if wanted: rename/move, download to the phone, edit files over 64 KB (would need SFTP for the content).
+4. Relay setup assistant inside the app (Team → Set up relay → "Install on one of my servers"): SSH in like the agent installer, relay as a single Go binary under systemd, Caddy (or an existing Nginx vhost) for TLS on the domain, token generated and saved automatically, DNS checked. Suleyman asked for this on 2026-11-02.
+5. Promo website for the app; the natural place is the relay's root URL (static page, API below it).
+6. Agent self-update through the API for non-root servers (upload over SFTP, agent verifies the hash and replaces itself) would give "Update now" on 208 too. Not started.
 
 ## Folder notes
 - `_old/` holds the zips that were used to sync from a cloud session. It is safe to delete.

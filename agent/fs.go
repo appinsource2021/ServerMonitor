@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -693,7 +694,7 @@ func (s *Server) fsMkdir(w http.ResponseWriter, r *http.Request) {
 // fsUploadSlot creates the upload directory, prunes stale uploads and hands the
 // app a path to write to over SFTP.
 func (s *Server) fsUploadSlot(w http.ResponseWriter, r *http.Request) {
-	if err := os.MkdirAll(fsUploadDir, 0o700); err != nil {
+	if err := fsPrepareUploadDir(s.store.Get().SocketGroup); err != nil {
 		writeErr(w, 500, err.Error())
 		return
 	}
@@ -712,8 +713,31 @@ func (s *Server) fsUploadSlot(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"temp": filepath.Join(fsUploadDir, hex.EncodeToString(b))})
 }
 
+// fsPrepareUploadDir creates the upload folder. With a socket_group the folder
+// is group-writable, so a non-root monitoring user (who writes the upload over
+// SFTP as themselves) can put the file there; otherwise only root can.
+func fsPrepareUploadDir(group string) error {
+	if err := os.MkdirAll(fsUploadDir, 0o700); err != nil {
+		return err
+	}
+	if group == "" {
+		return os.Chmod(fsUploadDir, 0o700)
+	}
+	g, err := user.LookupGroup(group)
+	if err != nil {
+		return fmt.Errorf("socket_group %q: %w", group, err)
+	}
+	gid, _ := strconv.Atoi(g.Gid)
+	if err := os.Chown(fsUploadDir, 0, gid); err != nil {
+		return err
+	}
+	return os.Chmod(fsUploadDir, 0o770)
+}
+
 // fsImport moves an uploaded file into place: deny list, no overwrite unless
 // asked (then a backup is kept), mode and owner of a replaced file preserved.
+// A new file takes the owner of its folder, so an upload made by the non-root
+// monitoring user does not land as that user.
 func (s *Server) fsImport(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Temp      string `json:"temp"`
@@ -763,6 +787,8 @@ func (s *Server) fsImport(w http.ResponseWriter, r *http.Request) {
 	} else if dfi, err := os.Stat(filepath.Dir(p)); err != nil || !dfi.IsDir() {
 		writeErr(w, 400, "parent directory does not exist")
 		return
+	} else {
+		st = statT(dfi)
 	}
 	if err := fsMoveInto(in.Temp, p, mode, st); err != nil {
 		writeErr(w, 500, err.Error())

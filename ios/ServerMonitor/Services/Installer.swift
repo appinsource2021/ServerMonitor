@@ -160,14 +160,22 @@ final class Installer {
             command -v systemctl >/dev/null && echo "systemd=yes" || echo "systemd=no"
             echo "docker=$(docker version --format '{{.Server.Version}}' 2>/dev/null || echo none)"
             command -v sha256sum >/dev/null && echo "sha=yes" || echo "sha=no"
+            echo "agent=$( [ -x /usr/local/bin/srvmon-agent ] && /usr/local/bin/srvmon-agent api GET /v1/health 2>/dev/null | head -n1 || echo none)"
             """
             let (info, _) = try await session.run(probe)
             let kv = Dictionary(info.split(separator: "\n").compactMap { line -> (String, String)? in
                 let p = line.split(separator: "=", maxSplits: 1).map(String.init)
                 return p.count == 2 ? (p[0], p[1]) : nil
             }, uniquingKeysWith: { a, _ in a })
-            guard kv["uid"] == "0" else { throw InstallError("Log in as root (uid 0) — sudo is not supported yet.") }
-            guard kv["systemd"] == "yes" else { throw InstallError("systemd was not found on this server.") }
+            // Not root: we cannot install anything, but we can use an agent the server's
+            // admin set up for this user (socket_group). Otherwise say what is missing.
+            let attach = kv["uid"] != "0"
+            if attach {
+                guard (kv["agent"] ?? "").hasPrefix("HTTP 200") else {
+                    throw InstallError("\(record.username) is not root and no agent answered for this user. Log in as root to install the agent, or ask the server's admin to create this monitoring user and install the agent with socket_group (see docs/BRIEFING-monitoring-user.md).")
+                }
+            }
+            guard attach || kv["systemd"] == "yes" else { throw InstallError("systemd was not found on this server.") }
             let arch: String
             switch kv["arch"] ?? "" {
             case "x86_64", "amd64": arch = "amd64"
@@ -176,7 +184,8 @@ final class Installer {
             }
             record.arch = arch
             let docker = kv["docker"] ?? "none"
-            set(current, .done, [kv["os"] ?? "Linux", kv["arch"] ?? arch, docker == "none" ? "no Docker" : "Docker \(docker)", "systemd"].joined(separator: " · "))
+            set(current, .done, [kv["os"] ?? "Linux", kv["arch"] ?? arch, docker == "none" ? "no Docker" : "Docker \(docker)",
+                                 attach ? "not root · existing agent" : "systemd"].joined(separator: " · "))
             out(info)
 
             if keyInstalled {
@@ -205,7 +214,13 @@ final class Installer {
                 out("app key added to authorized_keys; password discarded")
             }
 
+            if attach {
+                set("upload", .skipped, "agent already on the server")
+                set("install", .skipped, "managed by the server's admin")
+            }
+
             current = "upload"
+            if !attach {
             set(current, .running)
             let (bin, sums, installSh) = try bundledAgent(arch: arch)
             let expected = try expectedHash(sums: sums, arch: arch)
@@ -233,6 +248,7 @@ final class Installer {
             out(io)
             guard icode == 0 else { throw InstallError(io.split(separator: "\n").last.map(String.init) ?? "install failed") }
             set(current, .done, "listening on /run/srvmon/agent.sock")
+            }
 
             current = "health"
             set(current, .running)
@@ -241,7 +257,8 @@ final class Installer {
             let h: H = try await api.get("/v1/health")
             record.agentVersion = h.version
             record.installed = true
-            set(current, .done, "srvmon-agent \(h.version) OK")
+            record.externalAgent = attach ? true : nil
+            set(current, .done, "srvmon-agent \(h.version) OK" + (attach ? " · as \(record.username)" : ""))
 
             // Saved from here on: the server is usable even if push setup fails.
             store.upsert(record)

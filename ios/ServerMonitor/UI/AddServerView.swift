@@ -29,6 +29,12 @@ struct AddServerView: View {
                 })
     }
 
+    /// Non-root login: the app attaches to an agent the server's admin installed; it installs nothing.
+    private var attach: Bool {
+        let u = input.username.trimmingCharacters(in: .whitespaces).lowercased()
+        return !u.isEmpty && u != "root"
+    }
+
     private var valid: Bool {
         !input.name.trimmingCharacters(in: .whitespaces).isEmpty &&
         !input.host.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -100,12 +106,19 @@ struct AddServerView: View {
 
                 VStack(spacing: 8) {
                     SectionHeader(text: "Setup")
+                    if attach {
+                        Banner(icon: "person.badge.key", title: "Not root: uses the agent already on the server",
+                               text: "The server's admin creates the \(input.username.trimmingCharacters(in: .whitespaces)) user and installs the agent with socket_group for it. The app connects to that agent and installs, updates or removes nothing.",
+                               color: Theme.accent)
+                    }
                     ListCard {
                         toggle("Push alerts", PushSettings.configured ? "Uses your saved APNs key" : "Add the APNs key in Settings first", $input.pushAlerts)
                         Rectangle().fill(Theme.border).frame(height: 1)
                         toggle("Watch other servers", "Reports a server that stops answering", $input.watchOthers)
-                        Rectangle().fill(Theme.border).frame(height: 1)
-                        toggle("Container actions", "Allow start / stop / restart from the app", $input.allowActions)
+                        if !attach {
+                            Rectangle().fill(Theme.border).frame(height: 1)
+                            toggle("Container actions", "Allow start / stop / restart from the app", $input.allowActions)
+                        }
                     }
                 }
 
@@ -114,7 +127,7 @@ struct AddServerView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 4)
 
-                Button("Connect & install agent") { start() }
+                Button(attach ? "Connect to existing agent" : "Connect & install agent") { start() }
                     .buttonStyle(PrimaryButtonStyle())
                     .disabled(!valid)
                     .opacity(valid ? 1 : 0.5)
@@ -290,7 +303,7 @@ struct IPhoneKeyCard: View {
     var body: some View {
         ListCard {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Use this when the server doesn't accept a root password. Run this once on the server (for example from your Mac's SSH session), then connect:")
+                Text("Use this when the server doesn't accept a password. Run this once on the server as the user you log in with (for example from your Mac's SSH session), then connect:")
                     .font(.system(size: 13)).foregroundStyle(Theme.text2)
                 Text(command)
                     .font(Theme.mono(11)).foregroundStyle(Theme.text)

@@ -74,7 +74,7 @@ Uygulamada **Servers → +**'ya bas. Sonra:
    - **Name:** Listede görünecek isim, örneğin `Romon Prod`.
    - **Host:** IP adresi veya alan adı.
    - **Port:** Genelde 22.
-   - **User:** `root`. Şu an sadece root destekleniyor.
+   - **User:** `root` (agent'ı uygulama kurar). Root girişi kilitli sunucularda, yöneticinin agent'la birlikte hazırladığı root olmayan izleme kullanıcısı da (örneğin `srvmon`) yazılabilir; aşağıdaki "Root olmayan kullanıcıyla bağlanmak" bölümüne bak.
 2. **Giriş yöntemini seç:**
 
    | Yöntem | Ne zaman |
@@ -100,6 +100,16 @@ Uygulamada **Servers → +**'ya bas. Sonra:
    | 7. Register push alerts | APNs key'ini ve bu iPhone'u sunucuya kaydeder. |
 
 Bir adım hata verirse ekranda hatanın açıklaması ve bir **Try again** butonu çıkar.
+
+### Root olmayan kullanıcıyla bağlanmak (kurulu agent)
+
+Bazı sunucularda root girişi bilinçli olarak kilitlidir (örneğin yönetim penceresi ve Authenticator kodu ister). Uygulama bu kapıyı aşamaz ve aşmamalıdır. Çözüm, sunucu yöneticisinin bir kez hazırladığı **root olmayan izleme kullanıcısı**dır:
+
+- Yönetici sunucuda `srvmon` kullanıcısını açar (sadece key ile giriş, sudo ve docker grubu yok), agent'ı root olarak kurar ve ayarına `"socket_group": "srvmon"` yazar. Böylece agent'ın soketini yalnızca root ve `srvmon` kullanabilir. Hazır script `docs/BRIEFING-monitoring-user.md` içinde.
+- Sen uygulamada **Settings → This iPhone's SSH key → Copy key only** ile key'i kopyalarsın; yönetici onu `/home/srvmon/.ssh/authorized_keys` dosyasına ekler.
+- Sunucu eklerken **User** alanına `srvmon` yazıp **iPhone key**'i seçersin. Düğme **Connect to existing agent** olur; uygulama hiçbir şey kurmaz, agent'ın bu kullanıcıya cevap verdiğini kontrol edip sunucuyu kaydeder.
+- Böyle bir sunucuda ··· menüsünde **Update agent** ve "Remove and uninstall agent" görünmez; sarı güncelleme şeridi de düğmesiz çıkar ("update it on the server"). Agent güncellemesi sunucuda yöneticinin yaptığı bir iştir (aynı script yeni binary ile tekrar çalıştırılır).
+- Dikkat: agent root çalıştığı için bu kullanıcı, uygulama üzerinden agent'ın bütün API'sini kullanabilir: container'ları durdurup başlatmak, dosya okuyup düzenlemek ve silmek dahil. Key'i kimin taşıdığı önemlidir.
 
 ## 5. iPhone key: şifresiz giriş
 
@@ -179,7 +189,7 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys
   - **Stop:** Temizlik sürerken alttaki butona basınca, o an işlenen öğe bitince temizlik durur. Kalan öğeler "not run, stopped by user" olarak gösterilir. Bir öğe yarıda kesilmez, böylece hiçbir şey yarım kalmaz.
   - Tarama sürerken ne kadar zamandır çalıştığı ("Running for …") ve başlangıç saati gösterilir. 10 dakikayı geçerse uyarı çıkar; sunucu taramayı en geç 15 dakikada kendisi keser.
   - **Stop** telefonda beklemeyi her zaman hemen bitirir. Sunucuya ulaşılamazsa bunu ekranda söyler.
-  - Disk analizi ve temizlikteki Stop butonları için sunucuda agent 0.3.2, dosya listesi ve düzenleme için 0.3.3, Docker kartındaki motor sürümü, imaj sayısı ve 1 saatlik container grafiği için 0.3.4 gerekir (··· → **Update agent** ya da Servers ekranındaki **Update now**).
+  - Disk analizi ve temizlikteki Stop butonları için sunucuda agent 0.3.2, dosya listesi ve düzenleme için 0.3.3, Docker kartındaki motor sürümü, imaj sayısı ve 1 saatlik container grafiği için 0.3.4, root olmayan kullanıcıyla dosya yüklemek için 0.3.5 gerekir (··· → **Update agent** ya da Servers ekranındaki **Update now**).
 - **Terminal (sunucu detayında):** Gerçek bir SSH terminali (xterm-256color). `htop` ve `vim` gibi tam ekran programlar çalışır. Altta hazır komut butonları var (`docker ps`, `df -h`, `free -h`, `htop`, `journalctl -f`, Ctrl-C…). Bağlantı koparsa **Reconnect**'e bas. Terminal sadece SSH ile bağlanılan sunucularda açılır; ekip üyeleri (relay) terminal kullanamaz.
 - **··· menüsü (sunucu detayında):**
   - **Send test notification:** Test bildirimi gönderir.
@@ -290,7 +300,7 @@ location / {
 | **No answer from the server** (timeout) | Firewall SSH'a sadece belirli IP'lerden izin veriyor, ya da adres yanlış. | Hosting panelindeki firewall kurallarını kontrol et. Telefonu Mac ile aynı ağa bağlayıp dene. |
 | **The server refused the connection** | O portta SSH çalışmıyor. | Doğru portu yaz. Sunucuda kontrol: `ss -tlnp \| grep ssh` |
 | **host key changed** | Sunucu yeniden kuruldu ya da IP başka bir makineye geçti. | Bu beklenen bir durumsa sunucuyu uygulamadan sil ve yeniden ekle. Beklenmiyorsa bağlanma. |
-| **Log in as root (uid 0)** | root dışında bir kullanıcıyla giriş yapıldı. | Şimdilik `root` kullan. |
+| **… is not root and no agent answered for this user** | root dışında bir kullanıcıyla giriş yapıldı ama sunucuda bu kullanıcıya açık bir agent yok. | Ya `root` ile gir (uygulama kurar), ya da yönetici izleme kullanıcısını ve agent'ı `socket_group` ile hazırlasın (Bölüm 4, "Root olmayan kullanıcıyla bağlanmak"). |
 | **systemd was not found** | Sistem systemd kullanmıyor (Alpine, bazı container ortamları). | Desteklenmiyor. |
 | **Upload corrupted (checksum mismatch)** | Dosya yüklenirken bozuldu. | **Try again**. |
 | **agent did not become healthy** | Servis başlamadı. | Sunucuda: `journalctl -u srvmon-agent -n 50` |

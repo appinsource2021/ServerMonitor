@@ -93,7 +93,7 @@ Ardından `sshd -t && systemctl reload ssh`.
 
 | Dosya | sha256 |
 |---|---|
-| `~/Projects/ServerMonitor/ios/ServerMonitor/Resources/Agent/srvmon-agent-linux-amd64` | `dc61f381013d0a3b7160051186fb4ccf488a09ea4438df7bfd09930ef4929e50` |
+| `~/Projects/ServerMonitor/ios/ServerMonitor/Resources/Agent/srvmon-agent-linux-amd64` | `21ad80170b8c0970604d94e9a7c7009e66fe0e9fa056f5db42267c864bfb51ee` |
 
 Süleyman dosyayı yönetim penceresi açıkken sunucuya kopyalar:
 
@@ -104,9 +104,9 @@ scp ~/Projects/ServerMonitor/ios/ServerMonitor/Resources/Agent/srvmon-agent-linu
 Sunucuda:
 
 ```bash
-echo "dc61f381013d0a3b7160051186fb4ccf488a09ea4438df7bfd09930ef4929e50  /tmp/srvmon-agent" | sha256sum -c -
+echo "21ad80170b8c0970604d94e9a7c7009e66fe0e9fa056f5db42267c864bfb51ee  /tmp/srvmon-agent" | sha256sum -c -
 install -m 755 /tmp/srvmon-agent /usr/local/bin/srvmon-agent && rm /tmp/srvmon-agent
-/usr/local/bin/srvmon-agent version          # 0.2.1 olmalı
+/usr/local/bin/srvmon-agent version          # 0.3.5 olmalı
 
 install -d -m 700 /etc/srvmon
 cat > /etc/srvmon/config.json <<'EOF'
@@ -133,7 +133,6 @@ RuntimeDirectory=srvmon
 RuntimeDirectoryMode=0750
 NoNewPrivileges=true
 ProtectSystem=full
-ProtectHome=read-only
 PrivateTmp=true
 ReadWritePaths=/etc/srvmon
 
@@ -146,10 +145,12 @@ systemctl enable --now srvmon-agent
 ```
 
 Notlar:
-- `socket_group: "srvmon"` yeni bir ayar (agent 0.2.1). Socket dosyası `root:srvmon 0660`, klasörü `0750` olur. Sadece root ve `srvmon` grubu erişebilir.
+- `socket_group: "srvmon"` ayarı (agent 0.2.1 ve üstü). Socket dosyası `root:srvmon 0660`, klasörü `0750` olur. Sadece root ve `srvmon` grubu erişebilir.
 - `allow_actions: true` uygulamada container start/stop/restart butonlarını açar. Sadece izleme isteniyorsa `false` yapılmalı.
 - Agent root olarak çalışır, çünkü `/var/run/docker.sock`, `journalctl` ve `systemctl` için root gerekiyor. **Hiç port açmaz.**
-- Agent'ın API'sini kullanabilen `srvmon` kullanıcısı şunları yapabilir: container durumlarını ve loglarını okumak, (`allow_actions` açıksa) container'ları başlatıp durdurmak, alarm kurallarını ve push ayarlarını değiştirmek. **Sunucuda shell dışında hiçbir root yetkisi almaz.**
+- Agent'ın API'sini kullanabilen `srvmon` kullanıcısı şunları yapabilir: container durumlarını ve loglarını okumak, (`allow_actions` açıksa) container'ları başlatıp durdurmak, alarm kurallarını ve push ayarlarını değiştirmek, **agent 0.3.3'ten beri dosya yöneticisiyle dosya okumak, düzenlemek, silmek ve yüklemek** (agent root olduğu için bu işlemler root yetkisiyle yapılır; sistem yolları ve `/etc/srvmon` koruma listesindedir). Kullanıcı kendi shell'inde ise root yetkisi almaz. Bu yüzden iPhone key'inin kimde olduğu önemlidir.
+- Unit dosyasında `ProtectHome` **yok**: dosya yöneticisi `/home` ve `/root` altına da yazabilmeli. Uygulamanın kendi kurduğu unit ile aynı.
+- Agent 0.3.5, `/var/lib/srvmon/upload` klasörünü `root:srvmon 0770` yapar; uygulamanın SFTP ile `srvmon` olarak gönderdiği dosya oraya yazılır ve agent root olarak yerine taşır.
 
 ### 3.4 Dashboard: "Monitoring access" bölümü
 
@@ -174,7 +175,7 @@ Kurulum asistanında da aynı adım, isteğe bağlı olarak sunulmalı: **"Serve
 ### 3.5 Kabul testleri
 
 ```bash
-sudo -u srvmon /usr/local/bin/srvmon-agent api GET /v1/health      # HTTP 200, "version":"0.2.1"
+sudo -u srvmon /usr/local/bin/srvmon-agent api GET /v1/health      # HTTP 200, "version":"0.3.5"
 sudo -u nobody /usr/local/bin/srvmon-agent api GET /v1/health      # izin hatası (grupta değil)
 ls -la /run/srvmon/                                                 # drwxr-x--- root srvmon / srw-rw---- root srvmon agent.sock
 sudo -u srvmon sudo -n true                                         # başarısız olmalı (sudo yok)
@@ -206,4 +207,100 @@ userdel -r srvmon; groupdel srvmon 2>/dev/null
 ## 5. İleride
 
 - **Ekip erişimi (relay):** Uygulamanın ekip özelliği için agent, merkezi bir relay'e (`https://monitor.appinsource.eu` gibi) **dışarı doğru** HTTPS ile bağlanır. Bu yine port açmayı gerektirmez. Relay kurulduğunda agent'ın ayarına `relay` bölümü uygulama tarafından eklenecek. Bu brifingin kapsamında değil.
-- **Uygulama tarafı (benim yapacağım):** Uygulama `srvmon` gibi root olmayan bir kullanıcıyla bağlandığında agent'ı yeniden kurmaya çalışmayacak, kurulu agent'a bağlanacak. Sürüm güncellemesi bu sunucuda dashboard veya root üzerinden yapılacak.
+- **Uygulama tarafı (yapıldı, uygulama 0.3.5):** Uygulama `srvmon` gibi root olmayan bir kullanıcıyla bağlandığında kurulum yapmaz; agent'ın bu kullanıcıya cevap verdiğini kontrol edip sunucuyu kaydeder. "Update agent" ve "uninstall" o sunucuda gösterilmez. Sürüm güncellemesi bu sunucuda dashboard veya root üzerinden yapılır: aşağıdaki script yeni binary ile tekrar çalıştırılır, ayar dosyası korunur.
+
+## 6. Tek parça kurulum scripti (3.1 + 3.2 + 3.3 + 3.5)
+
+Aynı script ilk kurulumda ve her agent güncellemesinde kullanılır; var olan kullanıcıya, key'e ve ayar dosyasına dokunmaz.
+
+**Önce, Mac'ten (yönetim penceresi açıkken):**
+
+```bash
+scp ~/Projects/ServerMonitor/ios/ServerMonitor/Resources/Agent/srvmon-agent-linux-amd64 root@217.160.39.208:/tmp/srvmon-agent
+```
+
+**Sonra sunucuda root olarak.** `IPHONE_KEY` satırına uygulamadaki **Settings → This iPhone's SSH key → Copy key only** çıktısını yapıştır (boş bırakılırsa key adımı atlanır):
+
+```bash
+#!/bin/sh
+# Server Monitor: root olmayan izleme kullanicisi + agent. Root olarak calistir.
+set -eu
+IPHONE_KEY=''                      # ornek: ssh-ed25519 AAAA... server-monitor-ios
+SHA=21ad80170b8c0970604d94e9a7c7009e66fe0e9fa056f5db42267c864bfb51ee
+NAME='Romon MCP'
+
+echo "== 1. kullanici ve grup"
+getent group srvmon >/dev/null || groupadd --system srvmon
+id srvmon >/dev/null 2>&1 || useradd --create-home --shell /bin/bash --gid srvmon srvmon
+passwd -l srvmon >/dev/null
+install -d -m 700 -o srvmon -g srvmon /home/srvmon/.ssh
+[ -f /home/srvmon/.ssh/authorized_keys ] || install -m 600 -o srvmon -g srvmon /dev/null /home/srvmon/.ssh/authorized_keys
+if [ -n "$IPHONE_KEY" ]; then
+  grep -qF "$IPHONE_KEY" /home/srvmon/.ssh/authorized_keys || printf '%s\n' "$IPHONE_KEY" >> /home/srvmon/.ssh/authorized_keys
+fi
+
+echo "== 2. sshd: srvmon sadece key ile, forwarding yok"
+cat > /etc/ssh/sshd_config.d/40-srvmon.conf <<'EOF'
+Match User srvmon
+    PasswordAuthentication no
+    KbdInteractiveAuthentication no
+    AllowTcpForwarding no
+    AllowAgentForwarding no
+    AllowStreamLocalForwarding no
+    X11Forwarding no
+    PermitTunnel no
+EOF
+sshd -t && systemctl reload ssh
+
+echo "== 3. agent"
+echo "$SHA  /tmp/srvmon-agent" | sha256sum -c -
+install -m 755 /tmp/srvmon-agent /usr/local/bin/srvmon-agent.new
+mv -f /usr/local/bin/srvmon-agent.new /usr/local/bin/srvmon-agent
+rm -f /tmp/srvmon-agent
+install -d -m 700 /etc/srvmon
+if [ ! -f /etc/srvmon/config.json ]; then
+  cat > /etc/srvmon/config.json <<EOF
+{
+  "name": "$NAME",
+  "socket": "/run/srvmon/agent.sock",
+  "socket_group": "srvmon",
+  "allow_actions": true
+}
+EOF
+  chmod 600 /etc/srvmon/config.json
+fi
+cat > /etc/systemd/system/srvmon-agent.service <<'EOF'
+[Unit]
+Description=srvmon agent (server monitor for iOS)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/srvmon-agent run -config /etc/srvmon/config.json
+Restart=always
+RestartSec=5
+RuntimeDirectory=srvmon
+RuntimeDirectoryMode=0750
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+ReadWritePaths=/etc/srvmon
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
+systemctl enable srvmon-agent >/dev/null 2>&1
+systemctl restart srvmon-agent
+sleep 1
+
+echo "== 4. kontrol"
+/usr/local/bin/srvmon-agent version
+sudo -u srvmon /usr/local/bin/srvmon-agent api GET /v1/health | head -n1       # HTTP 200 olmali
+ls -la /run/srvmon/                                                            # root srvmon, 0750 / 0660
+id srvmon                                                                      # docker, sudo, adm YOK
+sshd -T -C user=root,host=x,addr=1.2.3.4 | grep -i authenticationmethods       # root kilidi degismedi
+echo "OK"
+```
+
+Çıktının son satırı `OK` ise iPhone'dan **User `srvmon` + iPhone key** ile eklenebilir. Sonraki agent güncellemelerinde yalnızca `scp` ve script tekrarlanır (SHA satırı yeni binary'nin hash'iyle değiştirilir; güncel hash `ios/ServerMonitor/Resources/Agent/SHA256SUMS` dosyasında).

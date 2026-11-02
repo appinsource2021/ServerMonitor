@@ -24,8 +24,13 @@ struct ServerRecord: Codable, Identifiable, Hashable {
     var relayServerID: String?
     /// Member servers: is the agent connected to the relay right now.
     var relayOnline: Bool?
+    /// The app logs in as a non-root user and uses an agent the server's admin installed
+    /// (`socket_group`). It cannot install, update or uninstall the agent there.
+    var externalAgent: Bool?
 
     var isRelay: Bool { auth == .relay }
+    /// The app installed the agent as root and can update or remove it.
+    var managesAgent: Bool { !isRelay && externalAgent != true }
 }
 
 // MARK: - Agent API (mirrors srvmon-agent JSON, snake_case → camelCase)
