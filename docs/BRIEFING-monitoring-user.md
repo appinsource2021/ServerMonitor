@@ -255,10 +255,16 @@ EOF
 sshd -t && systemctl reload ssh
 
 echo "== 3. agent"
-echo "$SHA  /tmp/srvmon-agent" | sha256sum -c -
-install -m 755 /tmp/srvmon-agent /usr/local/bin/srvmon-agent.new
-mv -f /usr/local/bin/srvmon-agent.new /usr/local/bin/srvmon-agent
-rm -f /tmp/srvmon-agent
+if [ -f /tmp/srvmon-agent ]; then
+  echo "$SHA  /tmp/srvmon-agent" | sha256sum -c -
+  install -m 755 /tmp/srvmon-agent /usr/local/bin/srvmon-agent.new
+  mv -f /usr/local/bin/srvmon-agent.new /usr/local/bin/srvmon-agent
+  rm -f /tmp/srvmon-agent
+elif [ -x /usr/local/bin/srvmon-agent ]; then
+  echo "no /tmp/srvmon-agent; keeping the installed agent $(/usr/local/bin/srvmon-agent version)"
+else
+  echo "ERROR: /tmp/srvmon-agent missing. Copy the agent binary there first." >&2; exit 1
+fi
 install -d -m 700 /etc/srvmon
 if [ ! -f /etc/srvmon/config.json ]; then
   cat > /etc/srvmon/config.json <<EOF
