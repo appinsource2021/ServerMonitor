@@ -68,8 +68,9 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Container actions are blocked when `allow_actions=false` in the agent config. The app offers "Turn on container actions".
 - Team members (relay) never see logs unless they are admins. Scopes are globs over container name, image or compose project.
 - Server 217.160.39.208 (the MCP dev server) has root login gated by TOTP plus a dashboard window.
-  - Solution: a non-root `srvmon` user with `socket_group "srvmon"`; the ready-to-paste script is in `docs/BRIEFING-monitoring-user.md` (binary 0.3.5, sha inside). Whether it has been run on 208 is unknown.
-  - The app side exists since 0.3.5, see "Non-root servers" below.
+  - Solved 2026-11-03: the `srvmon` user and agent 0.3.5 with `socket_group "srvmon"` are on 208 (script from the app, run as root in an admin window); the app connects as `srvmon` with the iPhone key ("Romon MCP"). Agent updates there: scp the binary to `/tmp/srvmon-agent`, run the script again.
+  - Lesson: login attempts made before the user existed got the phone's IP banned by fail2ban ("Connection refused"); `fail2ban-client set sshd unbanip <ip>` fixed it. Tell the user not to retry repeatedly.
+  - App side: see "Non-root servers" below.
 - Destructive actions on a real server need Suleyman's explicit OK.
 
 ## File manager (agent 0.3.3, `agent/fs.go`)
