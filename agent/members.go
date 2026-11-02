@@ -338,7 +338,14 @@ func (s *Server) summaryFor(m *Member, visible func(Container) bool) map[string]
 		snap.Services = []Service{}
 		snap.SystemdAvailable = false
 		snap.Peers = []PeerStatus{}
+		snap.Docker = nil
 		active = filtered
+	}
+	history := s.collector.History()
+	if !admin {
+		for i := range history {
+			history[i].DockerCPU, history[i].DockerMem = 0, 0
+		}
 	}
 	cc := ContainerCounts{Total: len(snap.Containers)}
 	for _, c := range snap.Containers {
@@ -361,7 +368,7 @@ func (s *Server) summaryFor(m *Member, visible func(Container) bool) map[string]
 		"alerts":          active,
 		"container_count": cc,
 		"failed_services": failed,
-		"history":         s.collector.History(),
+		"history":         history,
 	}
 	if m != nil {
 		out["viewer"] = map[string]string{"id": m.ID, "name": m.Name, "role": m.Role}

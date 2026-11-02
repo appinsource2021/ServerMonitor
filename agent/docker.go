@@ -454,3 +454,45 @@ func (d *DockerClient) Action(ctx context.Context, id, action string) error {
 	resp.Body.Close()
 	return nil
 }
+
+// DockerInfo is the engine summary shown on the app's Docker card.
+type DockerInfo struct {
+	Version       string `json:"version"`
+	Images        int    `json:"images"`
+	StorageDriver string `json:"storage_driver,omitempty"`
+	DataRoot      string `json:"data_root,omitempty"`
+}
+
+// Info reads GET /info. It is heavier than a container listing, so the
+// collector asks for it only once a minute.
+func (d *DockerClient) Info(ctx context.Context) (DockerInfo, error) {
+	var raw struct {
+		ServerVersion string `json:"ServerVersion"`
+		Images        int    `json:"Images"`
+		Driver        string `json:"Driver"`
+		DockerRootDir string `json:"DockerRootDir"`
+	}
+	if err := d.getJSON(ctx, "/info", &raw); err != nil {
+		return DockerInfo{}, err
+	}
+	return DockerInfo{Version: raw.ServerVersion, Images: raw.Images, StorageDriver: raw.Driver, DataRoot: raw.DockerRootDir}, nil
+}
+
+// dockerLoad sums what the running containers use: CPU as a share of the whole
+// host (0-100, like the host figure) and memory in bytes.
+func dockerLoad(containers []Container, cpus int) (cpu float64, mem uint64) {
+	for _, c := range containers {
+		if c.State != "running" {
+			continue
+		}
+		cpu += c.CPUPercent
+		mem += c.MemBytes
+	}
+	if cpus > 0 {
+		cpu /= float64(cpus)
+	}
+	if cpu > 100 {
+		cpu = 100
+	}
+	return round1(cpu), mem
+}

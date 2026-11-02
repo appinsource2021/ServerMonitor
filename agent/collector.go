@@ -34,6 +34,7 @@ type Snapshot struct {
 	Net              NetRate      `json:"net"`
 	DockerAvailable  bool         `json:"docker_available"`
 	DockerError      string       `json:"docker_error,omitempty"`
+	Docker           *DockerInfo  `json:"docker,omitempty"` // engine summary, agent >= 0.3.4
 	Containers       []Container  `json:"containers"`
 	SystemdAvailable bool         `json:"systemd_available"`
 	Services         []Service    `json:"services"`
@@ -44,6 +45,9 @@ type HistoryPoint struct {
 	Time   int64   `json:"t"`
 	CPU    float64 `json:"cpu"`
 	Memory float64 `json:"mem"`
+	// What the running containers used at that moment (agent >= 0.3.4).
+	DockerCPU float64 `json:"docker_cpu"` // share of the whole host, 0-100
+	DockerMem uint64  `json:"docker_mem"` // bytes
 }
 
 const historyLen = 120 // 1 hour at 30 s
@@ -60,6 +64,7 @@ type Collector struct {
 	prevNet  NetCounters
 	prevNetT time.Time
 	peers    map[string]*PeerStatus
+	infoAt   time.Time // last successful GET /info
 }
 
 func NewCollector(store *ConfigStore) *Collector {
@@ -173,14 +178,20 @@ func (c *Collector) collectHost() {
 	c.snap.Host = readHostInfo(cfg.Name)
 	c.snap.Time = now
 	if len(c.history) == 0 {
-		c.history = append(c.history, HistoryPoint{Time: now.Unix(), CPU: c.snap.CPUPercent, Memory: mem.Percent})
+		c.history = append(c.history, c.historyPoint(now))
 	}
+}
+
+// historyPoint samples the current snapshot; the caller holds the lock.
+func (c *Collector) historyPoint(now time.Time) HistoryPoint {
+	dcpu, dmem := dockerLoad(c.snap.Containers, c.snap.Host.CPUs)
+	return HistoryPoint{Time: now.Unix(), CPU: c.snap.CPUPercent, Memory: c.snap.Memory.Percent, DockerCPU: dcpu, DockerMem: dmem}
 }
 
 func (c *Collector) recordHistory() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.history = append(c.history, HistoryPoint{Time: time.Now().Unix(), CPU: c.snap.CPUPercent, Memory: c.snap.Memory.Percent})
+	c.history = append(c.history, c.historyPoint(time.Now()))
 	if len(c.history) > historyLen {
 		c.history = c.history[len(c.history)-historyLen:]
 	}
@@ -190,17 +201,33 @@ func (c *Collector) collectDocker(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
 	defer cancel()
 	list, err := c.docker.Collect(ctx)
+	var info *DockerInfo
+	if err == nil {
+		c.mu.RLock()
+		stale := time.Since(c.infoAt) >= time.Minute
+		c.mu.RUnlock()
+		if stale {
+			if in, ierr := c.docker.client.Info(ctx); ierr == nil {
+				info = &in
+			}
+		}
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if err != nil {
 		c.snap.DockerAvailable = false
 		c.snap.DockerError = err.Error()
+		c.snap.Docker = nil
 		c.snap.Containers = []Container{}
 		return
 	}
 	c.snap.DockerAvailable = true
 	c.snap.DockerError = ""
 	c.snap.Containers = list
+	if info != nil {
+		c.snap.Docker = info
+		c.infoAt = time.Now()
+	}
 }
 
 func (c *Collector) collectServices(ctx context.Context) {

@@ -5,9 +5,6 @@ struct ServerDetailView: View {
     @Environment(ServerStore.self) private var store
     let serverID: UUID
 
-    enum Tab { case containers, services }
-    @State private var tab: Tab = .containers
-    @State private var filter = ""
     @State private var showHealth = false
 
     private var server: ServerRecord? { store.servers.first { $0.id == serverID } }
@@ -77,16 +74,18 @@ struct ServerDetailView: View {
                     cpuChart(snap)
                     if snap.disks.count > 1 { disks(snap) }
 
-                    if store.seesLogs {
-                        Segmented(options: [(Tab.containers, "Containers · \(countLabel(matchingContainers(snap).count, snap.containers.count))"),
-                                            (Tab.services, "Services · \(countLabel(matchingServices(snap).count, snap.services.count))")],
-                                  selection: $tab)
-                    } else {
-                        SectionHeader(text: "Containers · \(countLabel(matchingContainers(snap).count, snap.containers.count))")
+                    // Docker is a service of its own: its card shows the engine's state and
+                    // load, and opens the container list. Everything else is "Other services".
+                    NavigationLink { ContainersScreen(serverID: server.id) } label: {
+                        DockerCard(snap: snap, history: state.summary?.history ?? [])
                     }
-                    FilterField(text: $filter, placeholder: tab == .containers ? "Filter containers — e.g. erp prod" : "Filter services")
-
-                    if tab == .containers { containers(server, snap) } else { services(server, snap) }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Shows the containers")
+                    if store.seesLogs {
+                        NavigationLink { ServicesScreen(serverID: server.id) } label: { ServicesCard(snap: snap) }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Shows the systemd services")
+                    }
                 } else if state.summary == nil && state.error == nil {
                     ProgressView().frame(maxWidth: .infinity).padding(40)
                 }
@@ -95,7 +94,6 @@ struct ServerDetailView: View {
             .padding(.bottom, 30)
         }
         .refreshable { await store.refresh(server) }
-        .scrollDismissesKeyboard(.immediately)
         .sheet(isPresented: $showHealth) { HealthCheckView(server: server) }
         .toolbar {
             // Separate, equatable view: data refreshes never redraw the open menu.
@@ -122,26 +120,6 @@ struct ServerDetailView: View {
             .frame(maxWidth: .infinity, minHeight: 44)
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.border))
-    }
-
-    private func countLabel(_ shown: Int, _ total: Int) -> String {
-        filter.trimmingCharacters(in: .whitespaces).isEmpty || shown == total ? "\(total)" : "\(shown)/\(total)"
-    }
-
-    /// Every word must appear (case-insensitive) in the name, image or compose project/service.
-    static func matches(_ query: String, _ fields: [String?]) -> Bool {
-        let words = query.lowercased().split(whereSeparator: { $0 == " " || $0 == "," }).map(String.init)
-        guard !words.isEmpty else { return true }
-        let hay = fields.compactMap { $0?.lowercased() }.joined(separator: " ")
-        return words.allSatisfy { hay.contains($0) }
-    }
-
-    private func matchingContainers(_ snap: Snapshot) -> [ContainerInfo] {
-        snap.containers.filter { Self.matches(filter, [$0.name, $0.image, $0.composeProject, $0.composeService]) }
-    }
-
-    private func matchingServices(_ snap: Snapshot) -> [ServiceInfo] {
-        snap.services.filter { Self.matches(filter, [$0.name, $0.description]) }
     }
 
     private func subtitle(_ s: ServerRecord, _ snap: Snapshot?) -> String {
@@ -193,60 +171,6 @@ struct ServerDetailView: View {
             VStack(spacing: 12) {
                 ForEach(snap.disks) { d in
                     MetricBar(label: d.mount + " · " + Fmt.bytes(d.freeBytes) + " free", value: d.percent)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func containers(_ server: ServerRecord, _ snap: Snapshot) -> some View {
-        if !snap.dockerAvailable {
-            Card { Text(snap.dockerError.map { "Docker not available: \($0)" } ?? "Docker not available on this server.")
-                .font(.system(size: 13)).foregroundStyle(Theme.text2) }
-        } else if snap.containers.isEmpty {
-            Card { Text("No containers.").font(.system(size: 13)).foregroundStyle(Theme.text2) }
-        } else if matchingContainers(snap).isEmpty {
-            Card { Text("No container matches “\(filter)”.").font(.system(size: 13)).foregroundStyle(Theme.text2) }
-        } else {
-            ListCard {
-                ForEach(matchingContainers(snap)) { c in
-                    NavigationLink {
-                        ContainerDetailView(serverID: server.id, containerName: c.name)
-                    } label: {
-                        ContainerRow(c: c)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func services(_ server: ServerRecord, _ snap: Snapshot) -> some View {
-        if !snap.systemdAvailable {
-            Card { Text("systemd not available.").font(.system(size: 13)).foregroundStyle(Theme.text2) }
-        } else {
-            let list = matchingServices(snap)
-                .sorted { ($0.health.rank, $0.name) < ($1.health.rank, $1.name) }
-            ListCard {
-                ForEach(list) { s in
-                    NavigationLink {
-                        LogsScreen(serverID: server.id, source: .service(s.name), title: s.name)
-                    } label: {
-                        HStack(spacing: 12) {
-                            StatusMark(health: s.health)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(s.name.replacingOccurrences(of: ".service", with: "")).font(.system(size: 15, weight: .medium))
-                                Text("\(s.active) · \(s.sub)").font(.system(size: 12))
-                                    .foregroundStyle(s.health == .critical ? Theme.crit : Theme.text2)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text3)
-                        }
-                        .padding(.horizontal, 14).padding(.vertical, 12)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
                 }
             }
         }

@@ -148,7 +148,8 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys
 - **Servers:** Sorunlu sunucular en üstte listelenir. Kartlarda CPU, RAM, disk ve çalışan container sayısı görünür. Bağlantı koparsa kartta **Reconnect** butonu çıkar. Sunucudaki agent uygulamadakinden eskiyse kartta sarı **Agent update needed** şeridi ve **Update now** düğmesi çıkar; dokununca güncelleme başlar.
 - **Sunucu detayı:**
   - CPU, RAM ve disk göstergeleri, son 1 saatlik CPU grafiği.
-  - **Containers / Services** sekmeleri.
+  - **Docker kartı:** Docker'ın kendi sağlık durumu (motor cevap veriyor mu, `docker.service` çalışıyor mu, sorunlu container var mı), motor sürümü, çalışan / durmuş / sorunlu container ve imaj sayıları, container'ların sunucuya bindirdiği toplam CPU ve RAM yükü, son 1 saatte container CPU'sunun sunucu CPU'suna göre seyri. Karta dokununca **Containers** ekranı açılır: en üstte Docker motorunun durumu (dokununca motorun logları), altında filtre kutusu ve container listesi.
+  - **Other services kartı:** Docker dışındaki systemd servisleri: kaç tanesi aktif, kaç tanesi çökmüş (çökenlerin adı kartta yazar). Dokununca **Services** ekranı açılır; filtre kutusu ve liste oradadır. Ekip üyeleri (relay) bu kartı görmez.
   - Filtre kutusu: `erp` yazınca adında "erp" geçenler, `erp prod` yazınca iki kelimeyi birden içerenler listelenir.
 - **Container detayı:**
   - Durum, restart sayısı, bellek kullanımı.
@@ -178,7 +179,7 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys
   - **Stop:** Temizlik sürerken alttaki butona basınca, o an işlenen öğe bitince temizlik durur. Kalan öğeler "not run, stopped by user" olarak gösterilir. Bir öğe yarıda kesilmez, böylece hiçbir şey yarım kalmaz.
   - Tarama sürerken ne kadar zamandır çalıştığı ("Running for …") ve başlangıç saati gösterilir. 10 dakikayı geçerse uyarı çıkar; sunucu taramayı en geç 15 dakikada kendisi keser.
   - **Stop** telefonda beklemeyi her zaman hemen bitirir. Sunucuya ulaşılamazsa bunu ekranda söyler.
-  - Disk analizi ve temizlikteki Stop butonları için sunucuda agent 0.3.2, dosya listesi ve düzenleme için 0.3.3 gerekir (··· → **Update agent**).
+  - Disk analizi ve temizlikteki Stop butonları için sunucuda agent 0.3.2, dosya listesi ve düzenleme için 0.3.3, Docker kartındaki motor sürümü, imaj sayısı ve 1 saatlik container grafiği için 0.3.4 gerekir (··· → **Update agent** ya da Servers ekranındaki **Update now**).
 - **Terminal (sunucu detayında):** Gerçek bir SSH terminali (xterm-256color). `htop` ve `vim` gibi tam ekran programlar çalışır. Altta hazır komut butonları var (`docker ps`, `df -h`, `free -h`, `htop`, `journalctl -f`, Ctrl-C…). Bağlantı koparsa **Reconnect**'e bas. Terminal sadece SSH ile bağlanılan sunucularda açılır; ekip üyeleri (relay) terminal kullanamaz.
 - **··· menüsü (sunucu detayında):**
   - **Send test notification:** Test bildirimi gönderir.

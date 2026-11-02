@@ -62,6 +62,7 @@ struct Snapshot: Decodable {
     let net: NetRate
     let dockerAvailable: Bool
     let dockerError: String?
+    let docker: DockerInfo?          // engine summary, agent ≥ 0.3.4
     let containers: [ContainerInfo]
     let systemdAvailable: Bool
     let services: [ServiceInfo]
@@ -178,6 +179,9 @@ struct HistoryPoint: Decodable, Identifiable {
     let t: Int64
     let cpu: Double
     let mem: Double
+    /// What the running containers used (agent ≥ 0.3.4): CPU as a share of the host, memory in bytes.
+    let dockerCpu: Double?
+    let dockerMem: UInt64?
     var id: Int64 { t }
     var date: Date { Date(timeIntervalSince1970: TimeInterval(t)) }
 }
@@ -225,6 +229,14 @@ struct LogsResponse: Decodable {
 struct ContainersResponse: Decodable {
     let available: Bool
     let containers: [ContainerInfo]
+}
+
+/// Docker engine summary from GET /info (agent ≥ 0.3.4).
+struct DockerInfo: Decodable, Hashable {
+    let version: String
+    let images: Int
+    let storageDriver: String?
+    let dataRoot: String?
 }
 
 // MARK: - Rules / config

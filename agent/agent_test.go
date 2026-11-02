@@ -405,6 +405,9 @@ func TestDockerCollectAndLogsAgainstFakeEngine(t *testing.T) {
 		}
 		w.Write([]byte(fmt.Sprintf(`{"cpu_stats":{"cpu_usage":{"total_usage":%d},"system_cpu_usage":%d,"online_cpus":8},"memory_stats":{"usage":1500000000,"limit":8000000000,"stats":{"inactive_file":0}}}`, total, sys)))
 	})
+	mux.HandleFunc("GET /info", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"ServerVersion":"27.3.1","Images":14,"Driver":"overlay2","DockerRootDir":"/var/lib/docker","NCPU":8}`))
+	})
 	mux.HandleFunc("GET /containers/{id}/logs", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("tail") != "50" || r.URL.Query().Get("timestamps") != "1" {
 			w.WriteHeader(400)
@@ -441,6 +444,32 @@ func TestDockerCollectAndLogsAgainstFakeEngine(t *testing.T) {
 	lines, err := client.Logs(ctx, "bbbbbbbbbbbb", 50, 0, false)
 	if err != nil || len(lines) != 2 || lines[1].Stream != "stderr" {
 		t.Fatalf("logs: %+v %v", lines, err)
+	}
+	info, err := client.Info(ctx)
+	if err != nil || info.Version != "27.3.1" || info.Images != 14 || info.StorageDriver != "overlay2" || info.DataRoot != "/var/lib/docker" {
+		t.Fatalf("info: %+v %v", info, err)
+	}
+	// The Docker card's load: only running containers count, CPU as a share of the host.
+	cpu, mem := dockerLoad(list, 8)
+	if cpu != 22.8 || mem != 1500000000 {
+		t.Fatalf("docker load: cpu=%v mem=%v", cpu, mem)
+	}
+}
+
+func TestDockerLoadClampsAndSkipsStopped(t *testing.T) {
+	cs := []Container{
+		{State: "running", CPUPercent: 350, MemBytes: 100},
+		{State: "running", CPUPercent: 90, MemBytes: 50},
+		{State: "exited", CPUPercent: 999, MemBytes: 999},
+	}
+	if cpu, mem := dockerLoad(cs, 4); cpu != 100 || mem != 150 {
+		t.Fatalf("got cpu=%v mem=%v", cpu, mem)
+	}
+	if cpu, mem := dockerLoad(nil, 0); cpu != 0 || mem != 0 {
+		t.Fatalf("empty: cpu=%v mem=%v", cpu, mem)
+	}
+	if cpu, _ := dockerLoad(cs[:2], 0); cpu != 100 {
+		t.Fatalf("unknown cpu count must not divide by zero, got %v", cpu)
 	}
 }
 

@@ -51,7 +51,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Entitlements stay **empty**. A personal Apple team cannot use Push Notifications, so APNs stays unused until there is a paid team.
 
 ## Versions
-- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.3.3** now.
+- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.3.4** now.
 - After agent changes:
   1. Bump both places.
   2. Run `make ios-resources`.
@@ -87,6 +87,14 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - `in_use` = bind mount of a container or working directory of a process (same idea as `protectedPaths` in `cleanup.go`).
 - iOS: `DiskUsageView` is a `List` (swipe or long-press to delete, `DeleteSheet` asks to type a folder's name; the `+` menu creates files and folders and uploads from the Files app over SFTP). `FileEditorView` views (line numbers, find), edits and saves; a 409 offers reload or overwrite.
 - Tests: `agent/fs_test.go` covers the deny list, listing, tail reads, conflict, backup, atomic write, delete and the relay 403.
+
+## Server screen (agent 0.3.4)
+- `ServerDetailView` no longer has Containers/Services tabs. Below the CPU chart sit two cards:
+  - `DockerCard` (`UI/ContainersScreen.swift`) → `ContainersScreen`: engine state, running/stopped/problems/images, the containers' total CPU (share of the host) and memory, and a last-hour chart of container CPU against host CPU. The screen lists the containers with the filter; its first row is `docker.service` with the engine's journal.
+  - `ServicesCard` (`UI/ServicesScreen.swift`) → `ServicesScreen`: every systemd unit except `docker.service` ("Other services"). Hidden for relay members without log access, as the tab was.
+- Agent side: `Snapshot.docker` (`DockerInfo`: version, images, storage driver, data root; from `GET /info`, refreshed once a minute) and `HistoryPoint.docker_cpu` / `docker_mem` (`dockerLoad` in `docker.go`, running containers only, CPU divided by the host's CPU count). Relay members get neither (`summaryFor` strips them).
+- Child screens run their own 5-second refresh loop: a `.task` on the server screen is cancelled while a pushed screen covers it.
+- The filter helper is `TextFilter.matches` (moved out of `ServerDetailView`).
 
 ## Open work
 1. Non-root connect mode for 208 (see above).
