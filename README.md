@@ -101,17 +101,22 @@ Uygulamada **Servers → +**'ya bas. Sonra:
 
 Bir adım hata verirse ekranda hatanın açıklaması ve bir **Try again** butonu çıkar.
 
-### Root olmayan kullanıcıyla bağlanmak (kurulu agent)
+### Root olmayan kullanıcıyla bağlanmak (`srvmon`)
 
-Bazı sunucularda root girişi bilinçli olarak kilitlidir (örneğin yönetim penceresi ve Authenticator kodu ister). Uygulama bu kapıyı aşamaz ve aşmamalıdır. Çözüm, sunucu yöneticisinin bir kez hazırladığı **root olmayan izleme kullanıcısı**dır:
+Bazı sunucularda root ile giriş kapalıdır (örneğin yönetim penceresi ve Authenticator kodu ister). Böyle bir sunucuda `srvmon` adında küçük bir kullanıcı açılır ve uygulama sunucuya onunla girer. Bu kullanıcı yalnızca agent'la konuşabilir; sudo'su yoktur, şifresi yoktur, sadece telefonun key'iyle girer. Root ayarlarına dokunulmaz.
 
-- Sunucu eklerken **User** alanına `srvmon` yazıp **iPhone key**'i seçersin. Setup bölümünde **Server setup script** düğmesi çıkar. Açılan ekran her şeyi telefonda üretir:
-  1. **Agent dosyası:** İşlemci türünü seç (amd64 / arm64), **Share binary** ile dosyayı Mac'e AirDrop'la ya da Dosyalar'a kaydet, sonra `scp` komutuyla (kopyalanabilir) sunucuya `/tmp/srvmon-agent` olarak gönder.
-  2. **Script:** iPhone key'i içine yazılmış hazır script. **Copy script** ya da **Share script** ile al, sunucuda root olarak çalıştır. Script `srvmon` kullanıcısını açar (sadece key ile giriş, sudo ve docker grubu yok), sshd'de bu kullanıcı için forwarding'i kapatır, agent'ı `"socket_group": "srvmon"` ayarıyla kurar ve sonunda kendini test eder; son satır `OK` olmalı. Aynı script daha sonra agent güncellemek için de kullanılır; kullanıcıya, key'e ve ayara dokunmaz.
-  3. Uygulamaya dönüp **Connect to existing agent**'a bas. Uygulama hiçbir şey kurmaz; agent'ın bu kullanıcıya cevap verdiğini kontrol edip sunucuyu kaydeder.
-  - Sunucu yöneticisine verilecek açıklama ve adımlar: `docs/SRVMON-USER.md`.
-- Böyle bir sunucuda ··· menüsünde **Update agent** ve "Remove and uninstall agent" görünmez; sarı güncelleme şeridi de düğmesiz çıkar ("update it on the server"). Agent güncellemesi sunucuda yöneticinin yaptığı bir iştir (aynı script yeni binary ile tekrar çalıştırılır).
-- Dikkat: agent root çalıştığı için bu kullanıcı, uygulama üzerinden agent'ın bütün API'sini kullanabilir: container'ları durdurup başlatmak, dosya okuyup düzenlemek ve silmek dahil. Key'i kimin taşıdığı önemlidir.
+Kurulum üç adımdır. Gereken her şeyi uygulama hazırlar:
+
+1. **Uygulamada:** Servers → **+**. User alanına `srvmon` yaz, giriş yöntemi olarak **iPhone key**'i seç. Setup bölümünde **Server setup script**'e dokun.
+2. **Sunucuda, bir kez, root olarak:** Açılan ekranda **Share binary** ile agent dosyasını Mac'e gönder (AirDrop) ve ekrandaki `scp` komutuyla sunucuya kopyala. Sonra **Copy script** ile scripti al ve sunucuda root olarak çalıştır. Script kullanıcıyı açar, telefonun key'ini ekler, agent'ı kurar ve en sonda `OK` yazar.
+3. **Uygulamada:** Geri dön, **Connect to existing agent**'a bas. Bitti.
+
+Bilmen gerekenler:
+- Bu sunucuda agent güncellemesini uygulama yapamaz (root değil). Sarı şerit çıkınca yeni dosyayı kopyalayıp aynı scripti tekrar çalıştırırsın; kullanıcı, key ve ayarlar korunur.
+- ··· menüsünde **Update agent** ve "Remove and uninstall agent" bu sunucuda görünmez.
+- Agent root çalıştığı için telefonun key'i olan kişi uygulamadan dosya okuyup düzenleyebilir ve silebilir. Key telefondan hiç çıkmaz; telefon kaybolursa sunucuda `/home/srvmon/.ssh/authorized_keys` içindeki satırı sil.
+- İkinci bir iPhone'u sunucuya eklemek için script gerekmez: Bölüm 5'teki "İkinci iPhone" adımlarına bak.
+- Ayrıntılar ve sorun giderme: `docs/SRVMON-USER.md`.
 
 ## 5. iPhone key: şifresiz giriş
 
@@ -141,6 +146,18 @@ Uygulama ilk açılışta iPhone'da bir **ed25519 SSH key'i** üretir:
 ```bash
 grep server-monitor-ios ~/.ssh/authorized_keys
 ```
+
+### İkinci iPhone: başka bir telefonu aynı sunuculara bağlamak
+
+Her iPhone'un kendi key'i vardır. İkinci telefonu sunuculara tek tek eklemek yerine, zaten bağlı olan telefon bunu yapar. Terminal ve root gerekmez.
+
+1. **Yeni telefonda:** Settings → **This iPhone's SSH key**. Orada bir QR kod var.
+2. **Bağlı telefonda:** Bu QR kodu **Kamera** uygulamasıyla okut. Server Monitor açılır, **Authorize iPhone** ekranı gelir. Hangi sunuculara eklenecekse seç, **Authorize**'a bas. Uygulama her sunucuda key'i `authorized_keys` dosyasına yazar (root ile bağlı olduğu sunucularda root'un, `srvmon` ile bağlı olduğu sunucularda `srvmon`'un dosyasına).
+3. **Bağlı telefonda** ikinci bir QR kod çıkar: sunucu listesi. **Yeni telefonla** bunu okut. Server Monitor açılır, sunucuları gösterir, **Add**'e bas. Sunucular eklenir ve kendi key'iyle bağlanır. Hiçbir şey kurulmaz.
+
+Telefonlar yan yana değilse QR yerine **Share link** ile linkleri gönderebilirsin; link diğer telefonda Server Monitor'ü açar. Key'i elle de yapıştırabilirsin: Settings → **Other iPhones** → key alanı → **Authorize**.
+
+**Erişimi kesmek:** Settings → **Other iPhones** listesinde telefonun yanındaki **Revoke**. Key, eklendiği bütün sunuculardan silinir.
 
 ### Key'i bir sunucudan kaldırmak
 

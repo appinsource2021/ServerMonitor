@@ -135,10 +135,20 @@ struct RootView: View {
                 .tag(2)
         }
         .onOpenURL { url in
-            if let link = TeamJoin.parse(url.absoluteString) { store.pendingJoin = link }
+            switch PhoneLink.parse(url.absoluteString) {
+            case .authorize(let a): store.pendingAuthorize = a
+            case .importServers(let i): store.pendingImport = i
+            case nil: if let link = TeamJoin.parse(url.absoluteString) { store.pendingJoin = link }
+            }
         }
         .sheet(item: Binding(get: { store.pendingJoin.map(JoinSheetItem.init) }, set: { if $0 == nil { store.pendingJoin = nil } })) { item in
             JoinView(link: item.link)
+        }
+        .sheet(item: Binding(get: { store.pendingAuthorize }, set: { if $0 == nil { store.pendingAuthorize = nil } })) { a in
+            AuthorizePhoneView(link: a)
+        }
+        .sheet(item: Binding(get: { store.pendingImport }, set: { if $0 == nil { store.pendingImport = nil } })) { i in
+            ImportServersView(link: i)
         }
         .toolbarBackground(Theme.bg.opacity(0.94), for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)

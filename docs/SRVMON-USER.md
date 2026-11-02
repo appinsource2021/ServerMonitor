@@ -2,6 +2,14 @@
 
 Server Monitor, sunucularını iPhone'dan izleyen bir uygulamadır. Sunucuya doğrudan "root" olarak girmesi gerekmez. İzleme, sunucuda tek bir iş için açılmış **`srvmon`** adlı kullanıcı üzerinden yapılır. Bu sayfa, izlemek istediğin bir sunucuda bu kullanıcının nasıl hazırlanacağını anlatır.
 
+## Kısaca
+
+1. Uygulamada sunucuyu eklerken User alanına `srvmon` yaz, **iPhone key**'i seç, **Server setup script**'e dokun.
+2. Agent dosyasını (**Share binary**) sunucuya `/tmp/srvmon-agent` olarak kopyala; scripti (**Copy script**) sunucuda root olarak çalıştır; son satır `OK` olsun.
+3. Uygulamada **Connect to existing agent**'a bas.
+
+Başka bir iPhone'u aynı sunuculara bağlamak için script gerekmez: bağlı telefon yeni telefonun QR kodunu okutur, key'i sunuculara kendisi ekler (uygulamada Settings → This iPhone's SSH key).
+
 ## Nasıl çalışır
 
 - Sunucuda **srvmon-agent** adlı küçük bir program çalışır. CPU, RAM, disk, Docker container'ları, servisler ve logları okur.
@@ -54,7 +62,9 @@ Scripti **tekrar çalıştırmak güvenlidir**: kullanıcı, key'ler ve ayar dos
 
 ## Birden fazla iPhone
 
-Her telefonun kendi key'i vardır. İkinci telefonda da aynı yolu izle: o telefonun uygulamasından scripti al ve sunucuda çalıştır. Script o telefonun key'ini ekler, öncekileri korur.
+Her telefonun kendi key'i vardır. İkinci telefon için scripti tekrar çalıştırmak gerekmez: yeni telefonda Settings → **This iPhone's SSH key** ekranındaki QR kodu, bağlı telefonun kamerasıyla okut. Bağlı telefon key'i seçtiğin sunuculardaki `authorized_keys` dosyasına ekler (`srvmon` kendi dosyasına yazabildiği için root gerekmez) ve yeni telefona sunucu listesini QR ile verir. Erişimi kesmek: bağlı telefonda Settings → Other iPhones → **Revoke**.
+
+İstersen eski yol da çalışır: yeni telefonun scriptini sunucuda çalıştır; script o telefonun key'ini ekler, öncekileri korur.
 
 ## Güvenlik notları
 

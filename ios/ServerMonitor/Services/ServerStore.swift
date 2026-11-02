@@ -30,6 +30,12 @@ final class ServerStore {
     let team = TeamStore()
     /// A srvmon://join link that was opened and waits for confirmation.
     var pendingJoin: TeamJoin.Link?
+    /// Another iPhone's key (srvmon://authorize) waiting to be put on servers.
+    var pendingAuthorize: PhoneLink.Authorize?
+    /// Servers another iPhone sent (srvmon://import) waiting to be added.
+    var pendingImport: PhoneLink.Import?
+    /// iPhones whose keys this phone put on servers (see PhoneLinks.swift).
+    var authorizedPhones: [AuthorizedPhone] = ServerStore.loadPhones()
 
     var isAdmin: Bool { member == nil }
     var canAct: Bool { member?.canAct ?? true }

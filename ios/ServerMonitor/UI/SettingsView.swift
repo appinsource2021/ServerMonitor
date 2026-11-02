@@ -61,19 +61,10 @@ struct SettingsView: View {
 
                     VStack(spacing: 8) {
                         SectionHeader(text: "This iPhone's SSH key")
-                        Card(padding: 14) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text(AppIdentity.fingerprint).font(Theme.mono(12)).foregroundStyle(Theme.text2).textSelection(.enabled)
-                                Text("Added to authorized_keys when you set up a server with a password. You can also add it yourself to log in with the key only.")
-                                    .font(.system(size: 12)).foregroundStyle(Theme.text2)
-                                Button("Copy public key") {
-                                    UIPasteboard.general.string = AppIdentity.publicKeyLine
-                                    message = "Public key copied."
-                                }
-                                .font(.system(size: 14, weight: .medium))
-                            }
-                        }
+                        PhoneKeyCard()
                     }
+
+                    AuthorizedPhonesSection()
                     }
 
                     TeamMembershipSection()

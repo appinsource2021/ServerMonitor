@@ -96,6 +96,12 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Agent 0.3.5: `fsPrepareUploadDir` makes `/var/lib/srvmon/upload` `root:<socket_group> 0770` so the SSH user can write uploads over SFTP; `fsImport` gives a new file the owner of its folder (an upload by `srvmon` no longer lands as `srvmon`).
 - Everything else (health check, disk, file manager, terminal, relay enrol) goes through the agent API or the user's own shell and works unchanged. The agent runs as root, so the non-root key holder has the full API, file edits included.
 
+## Second iPhone (phone-to-phone authorization)
+- `Services/PhoneLinks.swift`: `srvmon://authorize?k=<key line>&n=<device>` (new phone shows it as a QR in Settings → This iPhone's SSH key, `PhoneKeyCard`) and `srvmon://import?s=<base64url JSON [{n,h,p,u,x}]>` (the connected phone hands over its server list). Both are opened through the Camera app or a shared link; `RootView.onOpenURL` routes them to `store.pendingAuthorize` / `store.pendingImport`, join links as before.
+- `AuthorizePhoneView` (connected phone): picks servers, `store.authorize(key:on:)` appends the key to the login user's own `~/.ssh/authorized_keys` over SSH (root's or srvmon's, no root needed for the latter), remembers the phone in `store.authorizedPhones` (UserDefaults `phones.v1`), then shows the import QR. `ImportServersView` (new phone): `store.importServers` creates records with `auth: .appKey`, `installed: true`, `externalAgent` carried over; nothing is installed.
+- Settings → Other iPhones (`AuthorizedPhonesSection`): list with Revoke (`store.revoke`, removes the key line on every server it was put on, never this phone's own key) and a paste field for a key.
+- `PhoneLink.validKey` accepts only `ssh-ed25519 <51-byte blob> [plain comment]`; the line reaches the shell through `shq` only.
+
 ## Server screen (agent 0.3.4)
 - `ServerDetailView` no longer has Containers/Services tabs. Below the CPU chart sit two cards:
   - `DockerCard` (`UI/ContainersScreen.swift`) → `ContainersScreen`: engine state, running/stopped/problems/images, the containers' total CPU (share of the host) and memory, and a last-hour chart of container CPU against host CPU. The screen lists the containers with the filter; its first row is `docker.service` with the engine's journal.
