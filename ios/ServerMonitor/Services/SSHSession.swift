@@ -9,10 +9,12 @@ enum SSHError: LocalizedError {
     case hostKeyChanged(expected: String, got: String)
     case badPrivateKey(String)
     case commandFailed(code: Int, output: String)
+    case loginRejected(String)
 
     var errorDescription: String? {
         switch self {
         case .missingCredentials: "No credentials stored for this server."
+        case .loginRejected(let m): m
         case .hostKeyChanged: "The server's SSH host key changed. Connection refused for safety — remove and re-add the server if this is expected."
         case .badPrivateKey(let m): "Private key not usable: \(m)"
         case .commandFailed(let code, let out): "Command failed (\(code)): \(out.suffix(400))"
@@ -98,9 +100,35 @@ actor SSHSession {
         }
         connecting = task
         defer { connecting = nil }
-        let c = try await task.value
+        let c: SSHClient
+        do {
+            c = try await task.value
+        } catch {
+            let d = String(describing: error).lowercased()
+            if d.contains("allauthenticationoptionsfailed") || d.contains("userauth") || d.contains("authentication") {
+                throw SSHError.loginRejected(Self.loginHint(server))
+            }
+            throw error
+        }
         client = c
         return c
+    }
+
+    /// What a rejected login most likely means, by login method and user.
+    static func loginHint(_ s: ServerRecord) -> String {
+        let who = "\(s.username)@\(s.host)"
+        switch s.auth {
+        case .appKey where s.username == "root":
+            return "\(who) did not accept this iPhone's key. Add it to /root/.ssh/authorized_keys (Settings › This iPhone's SSH key › Copy public key), or set the server up with a password once so the app adds it."
+        case .appKey:
+            return "\(who) did not accept this iPhone's key. On the server check that /home/\(s.username)/.ssh/authorized_keys holds this iPhone's key (the setup script adds it when its IPHONE_KEY line is filled in) and that sshd allows the user (AllowUsers / AllowGroups): journalctl -u ssh | grep \(s.username) says why. Avoid repeated tries: the server may block this phone for a while."
+        case .importedKey:
+            return "\(who) did not accept the imported key. Its public half must be in that user's authorized_keys, and the passphrase must be right."
+        case .password:
+            return "Login failed. Check the password, or root login with a password may be disabled on the server (PermitRootLogin / PasswordAuthentication)."
+        case .relay:
+            return "Login failed."
+        }
     }
 
     /// Runs a shell snippet, merging stderr, and returns output + exit code

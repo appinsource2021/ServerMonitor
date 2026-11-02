@@ -319,6 +319,7 @@ location / {
 | **No answer from the server** (timeout) | Firewall SSH'a sadece belirli IP'lerden izin veriyor, ya da adres yanlış. | Hosting panelindeki firewall kurallarını kontrol et. Telefonu Mac ile aynı ağa bağlayıp dene. |
 | **The server refused the connection** | O portta SSH çalışmıyor. | Doğru portu yaz. Sunucuda kontrol: `ss -tlnp \| grep ssh` |
 | **host key changed** | Sunucu yeniden kuruldu ya da IP başka bir makineye geçti. | Bu beklenen bir durumsa sunucuyu uygulamadan sil ve yeniden ekle. Beklenmiyorsa bağlanma. |
+| **srvmon@… did not accept this iPhone's key** | Key `srvmon`'un `authorized_keys` dosyasında yok (scriptteki `IPHONE_KEY` satırı boş kalmış olabilir) ya da sshd `AllowUsers` / `AllowGroups` ile `srvmon`'a izin vermiyor. | Sunucuda: `cat /home/srvmon/.ssh/authorized_keys` (telefonun key'i olmalı), `sshd -T -C user=srvmon,host=x,addr=1.2.3.4 \| grep -Ei 'allowusers\|allowgroups'`, `journalctl -u ssh \| grep srvmon` sebebi yazar. Key eksikse uygulamanın ürettiği scripti tekrar çalıştır. |
 | **… is not root and no agent answered for this user** | root dışında bir kullanıcıyla giriş yapıldı ama sunucuda bu kullanıcıya açık bir agent yok. | Ya `root` ile gir (uygulama kurar), ya da yönetici izleme kullanıcısını ve agent'ı `socket_group` ile hazırlasın (Bölüm 4, "Root olmayan kullanıcıyla bağlanmak"). |
 | **systemd was not found** | Sistem systemd kullanmıyor (Alpine, bazı container ortamları). | Desteklenmiyor. |
 | **Upload corrupted (checksum mismatch)** | Dosya yüklenirken bozuldu. | **Try again**. |
