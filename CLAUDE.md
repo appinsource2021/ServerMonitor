@@ -51,7 +51,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Entitlements stay **empty**. A personal Apple team cannot use Push Notifications, so APNs stays unused until there is a paid team.
 
 ## Versions
-- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.3.5** now.
+- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.3.6** now.
 - After agent changes:
   1. Bump both places.
   2. Run `make ios-resources`.
@@ -88,6 +88,10 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - iOS: `DiskUsageView` is a `List` (swipe or long-press to delete, `DeleteSheet` asks to type a folder's name; the `+` menu creates files and folders and uploads from the Files app over SFTP). `FileEditorView` views (line numbers, find), edits and saves; a 409 offers reload or overwrite.
 - Tests: `agent/fs_test.go` covers the deny list, listing, tail reads, conflict, backup, atomic write, delete and the relay 403.
 
+## Agent self-update (agent 0.3.6, `agent/update.go`)
+- `POST /v1/agent/update {temp, sha256}`: `temp` must come from `POST /v1/fs/upload`; the agent checks the sha256, runs `<temp> version` (must look like a version), keeps the old file as `<path>.prev`, swaps with install + rename and schedules `systemctl restart srvmon-agent` two seconds later. Swap and restart run through `systemd-run` (transient units) because the service's `ProtectSystem=full` makes `/usr` read-only; without systemd-run it does the swap in-process. Relay members get 403 (not in the allowlist). Tests: `agent/update_test.go`.
+- iOS: `Installer` with `existing.externalAgent == true` takes this path (upload over SFTP to the slot as the login user, call the route, poll `/v1/health` until the new version answers, 45 s). `ServerRecord.canUpdateFromApp` = root-managed, or non-root with agent ≥ 0.3.6; it gates Update now and ··· → Update agent. Older non-root agents still need the manual script once (README § 11).
+
 ## Non-root servers (app 0.3.5, "attach" mode)
 - `ServerRecord.externalAgent == true` marks a server the app logs into as a non-root user; `managesAgent` is false then (also for relay servers).
 - `Installer.run`: the probe also runs `srvmon-agent api GET /v1/health` as the login user. uid ≠ 0 and `HTTP 200` → attach: upload/install steps are skipped, health is checked, the record is saved with `externalAgent`. uid ≠ 0 without an answering agent → error naming the briefing. Root behaves as before.
@@ -118,8 +122,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 4. Relay setup assistant inside the app (Team → Set up relay → "Install on one of my servers"): SSH in like the agent installer, relay as a single Go binary under systemd, Caddy (or an existing Nginx vhost) for TLS on the domain, token generated and saved automatically, DNS checked. Suleyman asked for this on 2026-11-02.
 5. Promo website for the app; the natural place is the relay's root URL (static page, API below it).
 6. Publish the `srvmon` user explanation. Suleyman (2026-11-02) wants the way the app monitors "through a `srvmon` user on each server" explained with steps where users see it: on the official website and in the app's setup. Text: `docs/SRVMON-USER.md` (Turkish, written for server admins; an English version is needed for the website). In the app the steps live in `MonitoringSetupView`.
-7. Consider making `srvmon` the login the app keeps even after a root install (the installer would create the user and switch the record to it, so the app never holds root). Needs agent self-update first (item 8), because Update agent and Terminal use root today.
-8. Agent self-update through the API for non-root servers (upload over SFTP, agent verifies the hash and replaces itself) would give "Update now" on 208 too. Not started.
+7. Consider making `srvmon` the login the app keeps even after a root install (the installer would create the user and switch the record to it, so the app never holds root). Agent self-update exists since 0.3.6; Terminal would run as `srvmon` then.
 
 ## Folder notes
 - `_old/` holds the zips that were used to sync from a cloud session. It is safe to delete.

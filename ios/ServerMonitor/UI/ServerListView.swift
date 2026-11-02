@@ -208,7 +208,7 @@ struct AgentUpdateChip: View {
     @State private var updating: Installer?
 
     var body: some View {
-        if server.managesAgent {
+        if server.canUpdateFromApp {
             Button {
                 let inst = Installer(input: NewServerInput(host: server.host, username: server.username), store: store, existing: server)
                 updating = inst
@@ -222,9 +222,9 @@ struct AgentUpdateChip: View {
                 NavigationStack { InstallProgressView(installer: inst, title: "Updating \(server.name)") }
             }
         } else {
-            // Non-root login: the agent belongs to the server's admin; the app cannot replace it.
+            // Non-root login to an agent older than 0.3.6: it cannot replace itself yet.
             strip(action: nil)
-                .accessibilityLabel("Agent update needed, server runs \(current). Update it on the server")
+                .accessibilityLabel("Agent update needed, server runs \(current). Update it on the server once")
         }
     }
 
@@ -234,7 +234,7 @@ struct AgentUpdateChip: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Agent update needed").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.warn)
                 Text(action == nil
-                     ? "Server runs \(current) · app has \(BundledAgent.version) · update it on the server (not root)"
+                     ? "Server runs \(current) · app has \(BundledAgent.version) · update it on the server once; from 0.3.6 it updates from here"
                      : "Server runs \(current) · app has \(BundledAgent.version)")
                     .font(.system(size: 11)).foregroundStyle(Theme.text2)
             }

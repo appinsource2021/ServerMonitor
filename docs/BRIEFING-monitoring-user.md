@@ -93,7 +93,7 @@ Ardından `sshd -t && systemctl reload ssh`.
 
 | Dosya | sha256 |
 |---|---|
-| `~/Projects/ServerMonitor/ios/ServerMonitor/Resources/Agent/srvmon-agent-linux-amd64` | `21ad80170b8c0970604d94e9a7c7009e66fe0e9fa056f5db42267c864bfb51ee` |
+| `~/Projects/ServerMonitor/ios/ServerMonitor/Resources/Agent/srvmon-agent-linux-amd64` | `f33fe11906476eab97524a91ab727655af9af842b9b465f2d42f3a33eb09c49d` |
 
 Süleyman dosyayı yönetim penceresi açıkken sunucuya kopyalar:
 
@@ -104,9 +104,9 @@ scp ~/Projects/ServerMonitor/ios/ServerMonitor/Resources/Agent/srvmon-agent-linu
 Sunucuda:
 
 ```bash
-echo "21ad80170b8c0970604d94e9a7c7009e66fe0e9fa056f5db42267c864bfb51ee  /tmp/srvmon-agent" | sha256sum -c -
+echo "f33fe11906476eab97524a91ab727655af9af842b9b465f2d42f3a33eb09c49d  /tmp/srvmon-agent" | sha256sum -c -
 install -m 755 /tmp/srvmon-agent /usr/local/bin/srvmon-agent && rm /tmp/srvmon-agent
-/usr/local/bin/srvmon-agent version          # 0.3.5 olmalı
+/usr/local/bin/srvmon-agent version          # 0.3.6 olmalı
 
 install -d -m 700 /etc/srvmon
 cat > /etc/srvmon/config.json <<'EOF'
@@ -175,7 +175,7 @@ Kurulum asistanında da aynı adım, isteğe bağlı olarak sunulmalı: **"Serve
 ### 3.5 Kabul testleri
 
 ```bash
-sudo -u srvmon /usr/local/bin/srvmon-agent api GET /v1/health      # HTTP 200, "version":"0.3.5"
+sudo -u srvmon /usr/local/bin/srvmon-agent api GET /v1/health      # HTTP 200, "version":"0.3.6"
 sudo -u nobody /usr/local/bin/srvmon-agent api GET /v1/health      # izin hatası (grupta değil)
 ls -la /run/srvmon/                                                 # drwxr-x--- root srvmon / srw-rw---- root srvmon agent.sock
 sudo -u srvmon sudo -n true                                         # başarısız olmalı (sudo yok)
@@ -228,7 +228,7 @@ scp ~/Projects/ServerMonitor/ios/ServerMonitor/Resources/Agent/srvmon-agent-linu
 # Server Monitor: root olmayan izleme kullanicisi + agent. Root olarak calistir.
 set -eu
 IPHONE_KEY=''                      # ornek: ssh-ed25519 AAAA... server-monitor-ios
-SHA=21ad80170b8c0970604d94e9a7c7009e66fe0e9fa056f5db42267c864bfb51ee
+SHA=f33fe11906476eab97524a91ab727655af9af842b9b465f2d42f3a33eb09c49d
 NAME='Romon MCP'
 
 echo "== 1. kullanici ve grup"

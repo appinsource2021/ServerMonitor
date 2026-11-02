@@ -213,7 +213,7 @@ struct ServerActionsMenu: View, Equatable {
                     } catch { message = friendlyError(error) }
                 }
             } label: { Label("Container actions…", systemImage: "switch.2") }
-            if server.managesAgent {
+            if server.canUpdateFromApp {
                 Button {
                     let inst = Installer(input: NewServerInput(host: server.host, username: server.username), store: store, existing: server)
                     updating = inst

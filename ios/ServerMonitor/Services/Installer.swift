@@ -83,9 +83,11 @@ final class Installer {
         if existing == nil && !input.useKey && !input.usesAppKey && input.switchToAppKey {
             s.append(Step(id: "key", title: "Install app SSH key", detail: "password will not be stored"))
         }
+        let selfUpdate = existing?.externalAgent == true
         s += [
-            Step(id: "upload", title: "Upload agent", detail: "srvmon-agent + install script"),
-            Step(id: "install", title: "Install & start service", detail: "systemctl enable --now srvmon-agent"),
+            Step(id: "upload", title: "Upload agent", detail: selfUpdate ? "to the agent's upload folder (SFTP)" : "srvmon-agent + install script"),
+            Step(id: "install", title: selfUpdate ? "Agent updates itself" : "Install & start service",
+                 detail: selfUpdate ? "checks sha256, swaps the binary, restarts" : "systemctl enable --now srvmon-agent"),
             Step(id: "health", title: "Health check", detail: "srvmon-agent api GET /v1/health"),
             Step(id: "push", title: "Register push alerts", detail: "device token + APNs key"),
         ]
@@ -214,13 +216,64 @@ final class Installer {
                 out("app key added to authorized_keys; password discarded")
             }
 
-            if attach {
+            // Non-root login: a first connect just uses the agent that is there; an update
+            // hands the new binary to the agent, which replaces itself (agent ≥ 0.3.6).
+            let selfUpdate = attach && existing != nil
+            if attach && !selfUpdate {
                 set("upload", .skipped, "agent already on the server")
                 set("install", .skipped, "managed by the server's admin")
             }
 
             current = "upload"
-            if !attach {
+            if selfUpdate {
+                set(current, .running)
+                let (bin, sums, _) = try bundledAgent(arch: arch)
+                let expected = try expectedHash(sums: sums, arch: arch)
+                let actual = SHA256.hash(data: bin).map { String(format: "%02x", $0) }.joined()
+                guard actual == expected else { throw InstallError("Bundled agent checksum mismatch.") }
+                let api = AgentAPI(session: session)
+                let tooOld = InstallError("Agent \(record.agentVersion ?? "?") cannot update itself. Update it on the server once (README › Agent'ı güncellemek); from 0.3.6 on, updates work from here.")
+                struct Slot: Decodable { let temp: String }
+                let slot: Slot
+                do {
+                    slot = try JSON.decoder.decode(Slot.self, from: try await api.post("/v1/fs/upload"))
+                } catch let e as AgentAPI.HTTPError where e.status == 404 {
+                    throw tooOld
+                }
+                let total = bin.count
+                try await session.upload(bin, to: slot.temp) { [weak self] p in
+                    Task { @MainActor in
+                        self?.set("upload", .running, "srvmon-agent · \(Fmt.bytes(UInt64(Double(total) * p))) / \(Fmt.bytes(UInt64(total)))")
+                    }
+                }
+                set(current, .done, "srvmon-agent · \(Fmt.bytes(UInt64(total))) · sha256 \(expected.prefix(12))…")
+
+                current = "install"
+                set(current, .running, "the agent checks the file, swaps itself and restarts")
+                struct Up: Encodable { let temp: String; let sha256: String }
+                struct UpResult: Decodable { let to: String }
+                let res: UpResult
+                do {
+                    res = try JSON.decoder.decode(UpResult.self, from: try await api.send("POST", "/v1/agent/update", Up(temp: slot.temp, sha256: expected), timeout: .seconds(90)))
+                } catch let e as AgentAPI.HTTPError where e.status == 404 {
+                    throw tooOld
+                }
+                out("agent accepted \(res.to); restarting")
+                // It restarts about two seconds later; wait until the new version answers.
+                var seen = ""
+                for i in 0..<45 {
+                    try? await Task.sleep(for: .seconds(1))
+                    set(current, .running, "waiting for \(res.to) to come back · \(i + 1) s")
+                    if let h: AgentHealth = try? await api.get("/v1/health", timeout: .seconds(15)) {
+                        seen = h.version
+                        if h.version == res.to { break }
+                    }
+                }
+                guard seen == res.to else {
+                    throw InstallError("The agent did not come back as \(res.to) (last seen: \(seen.isEmpty ? "no answer" : seen)). On the server: systemctl status srvmon-agent; the old binary is kept as srvmon-agent.prev.")
+                }
+                set(current, .done, "restarted as \(res.to)")
+            } else if !attach {
             set(current, .running)
             let (bin, sums, installSh) = try bundledAgent(arch: arch)
             let expected = try expectedHash(sums: sums, arch: arch)
@@ -253,8 +306,7 @@ final class Installer {
             current = "health"
             set(current, .running)
             let api = AgentAPI(session: session)
-            struct H: Decodable { let ok: Bool; let version: String }
-            let h: H = try await api.get("/v1/health")
+            let h: AgentHealth = try await api.get("/v1/health")
             record.agentVersion = h.version
             record.installed = true
             record.externalAgent = attach ? true : nil
@@ -300,6 +352,21 @@ final class Installer {
             if p.count == 2, p[1].hasSuffix("srvmon-agent-linux-\(arch)") { return String(p[0]) }
         }
         throw InstallError("No checksum for \(arch).")
+    }
+}
+
+struct AgentHealth: Decodable {
+    let ok: Bool
+    let version: String
+}
+
+extension ServerRecord {
+    /// The app can replace the agent: as root through the installer, or, for a non-root
+    /// login, through the agent's own update route (agent ≥ 0.3.6).
+    var canUpdateFromApp: Bool {
+        if isRelay { return false }
+        if managesAgent { return true }
+        return BundledAgent.compare(agentVersion ?? "0", "0.3.6") >= 0
     }
 }
 

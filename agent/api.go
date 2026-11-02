@@ -72,6 +72,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("POST /v1/fs/mkdir", s.fsMkdir)
 	m.HandleFunc("POST /v1/fs/upload", s.fsUploadSlot)
 	m.HandleFunc("POST /v1/fs/import", s.fsImport)
+	m.HandleFunc("POST /v1/agent/update", s.agentUpdate)
 	return limitBody(m)
 }
 

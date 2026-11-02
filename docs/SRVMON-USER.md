@@ -62,7 +62,11 @@ Scripti **tekrar çalıştırmak güvenlidir**: kullanıcı, key'ler ve ayar dos
 
 ## Agent'ı güncellemek
 
-Uygulama yeni bir agent taşıdığında sunucu kartında sarı **Agent update needed** şeridi çıkar. `srvmon` ile bağlı sunucuda uygulama root olmadığı için güncellemeyi sen yaparsın; kurulumla aynı adımlar:
+Uygulama yeni bir agent taşıdığında sunucu kartında sarı **Agent update needed** şeridi çıkar.
+
+**Agent 0.3.6 ve üstü: Update now'a bas, bitti.** Uygulama yeni dosyayı SFTP ile agent'ın yükleme klasörüne koyar; agent root olarak sha256'yı doğrular, dosyayı test eder, eskisini `.prev` olarak saklar, yenisini yerine koyar ve kendini yeniden başlatır. Geri almak: `mv /usr/local/bin/srvmon-agent.prev /usr/local/bin/srvmon-agent && systemctl restart srvmon-agent`.
+
+**Agent 0.3.5 ve öncesi, ya da otomatik olmazsa: elle.** Kurulumla aynı adımlar:
 
 1. Uygulamada Servers → **+** → User `srvmon` → **Server setup script**. **Share binary** ile yeni dosyayı al, **Copy script** ile scripti al (içinde yeni sürümün sha256'sı var).
 2. Sunucuya kopyala: `scp srvmon-agent-linux-amd64 root@SUNUCU:/tmp/srvmon-agent`. Sonra scripti root olarak çalıştır. Script dosyayı doğrular, yerine koyar, servisi yeniden başlatır, `OK` yazar. Kullanıcı, key ve ayar dosyası olduğu gibi kalır.

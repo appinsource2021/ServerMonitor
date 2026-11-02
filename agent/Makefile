@@ -1,4 +1,4 @@
-VERSION ?= 0.3.5
+VERSION ?= 0.3.6
 LDFLAGS := -s -w -X main.version=$(VERSION)
 OUT := dist
 IOS_RES := ../ios/ServerMonitor/Resources/Agent

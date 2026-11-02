@@ -375,7 +375,9 @@ Uygulama her yeni sürümünde içinde yeni bir agent taşır. Sunucudaki agent 
 
 **Root ile bağlı sunucular: otomatik.** Şeritteki **Update now**'a (ya da ··· → **Update agent**) bas. Uygulama yeni dosyayı SFTP ile yükler, sha256 ile doğrular, kurulum scriptini root olarak çalıştırır; ayar dosyası korunur, servis yeniden başlar. Yaklaşık 10 saniye.
 
-**`srvmon` ile bağlı sunucular: elle.** Uygulama bu sunucuda root değildir ve agent dosyasının yolu koruma listesindedir; şerit düğmesiz çıkar. Güncelleme, kurulumla aynı üç adımdır:
+**`srvmon` ile bağlı sunucular: agent 0.3.6'dan itibaren otomatik.** Uygulama root değildir ama agent'ın kendini güncelleme kapısı vardır. **Update now**'a basınca uygulama yeni dosyayı SFTP ile agent'ın yükleme klasörüne (`/var/lib/srvmon/upload`) atar ve agent'a dosyanın sha256'sını söyler. Agent root olarak: sha256'yı doğrular, dosyayı `version` ile çalıştırıp test eder, eskisini `/usr/local/bin/srvmon-agent.prev` olarak saklar, yenisini tek hamlede yerine koyar ve 2 saniye sonra kendini yeniden başlatır (ikisi de `systemd-run` ile, servisin kendi sandbox'ının dışında). Uygulama yeni sürüm cevap verene kadar bekler (en çok 45 s). Geri almak gerekirse sunucuda: `mv /usr/local/bin/srvmon-agent.prev /usr/local/bin/srvmon-agent && systemctl restart srvmon-agent`.
+
+**`srvmon` ile bağlı sunucular, elle.** 0.3.5 ve öncesinden ilk geçişte (o sürümler kendini güncelleyemez; şerit düğmesiz çıkar) ya da otomatik güncelleme bir sebeple olmazsa. Kurulumla aynı üç adım:
 
 1. **Yeni dosyayı al.** Uygulamada Servers → **+** → User `srvmon` → **Server setup script** ekranındaki **Share binary** ile (Mac'e AirDrop). Ya da geliştirici Mac'inde hazır: `ios/ServerMonitor/Resources/Agent/srvmon-agent-linux-amd64` (doğru sha256 yanındaki `SHA256SUMS` dosyasında).
 2. **Sunucuya kopyala ve scripti çalıştır.** Yönetim penceresi açıkken:
