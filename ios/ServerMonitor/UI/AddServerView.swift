@@ -9,6 +9,7 @@ struct AddServerView: View {
     @State private var installer: Installer?
     @State private var importKey = false
     @State private var confirmDelete = false
+    @State private var showSetup = false
     /// A saved, unfinished setup being continued.
     let draft: ServerRecord?
 
@@ -75,7 +76,7 @@ struct AddServerView: View {
                     Segmented(options: [(AuthChoice.password, "Password"), (AuthChoice.iphone, "iPhone key"), (AuthChoice.file, "Key file")],
                               selection: authChoice)
                     if input.usesAppKey {
-                        IPhoneKeyCard()
+                        IPhoneKeyCard(attachUser: attach ? input.username.trimmingCharacters(in: .whitespaces) : nil)
                     } else if input.useKey {
                         ListCard {
                             VStack(alignment: .leading, spacing: 8) {
@@ -107,9 +108,20 @@ struct AddServerView: View {
                 VStack(spacing: 8) {
                     SectionHeader(text: "Setup")
                     if attach {
-                        Banner(icon: "person.badge.key", title: "Not root: uses the agent already on the server",
-                               text: "The server's admin creates the \(input.username.trimmingCharacters(in: .whitespaces)) user and installs the agent with socket_group for it. The app connects to that agent and installs, updates or removes nothing.",
-                               color: Theme.accent)
+                        VStack(spacing: 10) {
+                            Banner(icon: "person.badge.key", title: "Not root: uses the agent already on the server",
+                                   text: "The server's admin creates the \(input.username.trimmingCharacters(in: .whitespaces)) user and installs the agent with socket_group for it. The app connects to that agent and installs, updates or removes nothing.",
+                                   color: Theme.accent)
+                            Button { showSetup = true } label: {
+                                Label("Server setup script", systemImage: "doc.text")
+                                    .font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
+                                    .frame(maxWidth: .infinity, minHeight: 44)
+                                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.border))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Shows what the server's admin runs once, with this iPhone's key filled in")
+                        }
                     }
                     ListCard {
                         toggle("Push alerts", PushSettings.configured ? "Uses your saved APNs key" : "Add the APNs key in Settings first", $input.pushAlerts)
@@ -146,6 +158,9 @@ struct AddServerView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button(draft == nil ? "Cancel" : "Close") { dismiss() } }
+        }
+        .sheet(isPresented: $showSetup) {
+            MonitoringSetupView(username: input.username, host: input.host, serverName: input.name)
         }
         .confirmationDialog("Delete \(input.name)?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
@@ -295,7 +310,9 @@ struct InstallProgressView: View {
 }
 
 /// Shows this iPhone's public key and the one-line command to authorize it on a server.
+/// For a non-root user the setup script (Setup section) adds the key; only the key is shown.
 struct IPhoneKeyCard: View {
+    var attachUser: String? = nil
     @State private var copied: String?
     private var command: String {
         "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '\(AppIdentity.publicKeyLine)' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
@@ -303,17 +320,23 @@ struct IPhoneKeyCard: View {
     var body: some View {
         ListCard {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Use this when the server doesn't accept a password. Run this once on the server as the user you log in with (for example from your Mac's SSH session), then connect:")
-                    .font(.system(size: 13)).foregroundStyle(Theme.text2)
-                Text(command)
-                    .font(Theme.mono(11)).foregroundStyle(Theme.text)
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.logBg, in: RoundedRectangle(cornerRadius: 10))
-                    .textSelection(.enabled)
-                HStack(spacing: 8) {
-                    copyButton("Copy command", command)
+                if let u = attachUser {
+                    Text("The server setup script (below, under Setup) adds this key for \(u). Nothing else to do here.")
+                        .font(.system(size: 13)).foregroundStyle(Theme.text2)
                     copyButton("Copy key only", AppIdentity.publicKeyLine)
+                } else {
+                    Text("Use this when the server doesn't accept a password. Run this once on the server as the user you log in with (for example from your Mac's SSH session), then connect:")
+                        .font(.system(size: 13)).foregroundStyle(Theme.text2)
+                    Text(command)
+                        .font(Theme.mono(11)).foregroundStyle(Theme.text)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Theme.logBg, in: RoundedRectangle(cornerRadius: 10))
+                        .textSelection(.enabled)
+                    HStack(spacing: 8) {
+                        copyButton("Copy command", command)
+                        copyButton("Copy key only", AppIdentity.publicKeyLine)
+                    }
                 }
                 Text(AppIdentity.fingerprint).font(Theme.mono(10)).foregroundStyle(Theme.text3)
             }

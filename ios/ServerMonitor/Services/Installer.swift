@@ -317,6 +317,23 @@ enum BundledAgent {
         return s.trimmingCharacters(in: .whitespacesAndNewlines)
     }()
 
+    static func binaryURL(arch: String) -> URL? {
+        guard let dir = Bundle.main.url(forResource: "Agent", withExtension: nil) else { return nil }
+        let url = dir.appendingPathComponent("srvmon-agent-linux-\(arch)")
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
+    /// sha256 of the bundled binary for an architecture, from SHA256SUMS.
+    static func sha256(arch: String) -> String? {
+        guard let dir = Bundle.main.url(forResource: "Agent", withExtension: nil),
+              let sums = try? String(contentsOf: dir.appendingPathComponent("SHA256SUMS"), encoding: .utf8) else { return nil }
+        for line in sums.split(separator: "\n") {
+            let p = line.split(separator: " ", omittingEmptySubsequences: true)
+            if p.count == 2, p[1].hasSuffix("srvmon-agent-linux-\(arch)") { return String(p[0]) }
+        }
+        return nil
+    }
+
     /// true when the server's agent is older than the bundled one ("0.3.2" < "0.3.3").
     static func isOutdated(_ server: String?) -> Bool {
         guard let server, !server.isEmpty, !version.isEmpty else { return false }

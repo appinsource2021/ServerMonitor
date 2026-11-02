@@ -105,9 +105,11 @@ Bir adım hata verirse ekranda hatanın açıklaması ve bir **Try again** buton
 
 Bazı sunucularda root girişi bilinçli olarak kilitlidir (örneğin yönetim penceresi ve Authenticator kodu ister). Uygulama bu kapıyı aşamaz ve aşmamalıdır. Çözüm, sunucu yöneticisinin bir kez hazırladığı **root olmayan izleme kullanıcısı**dır:
 
-- Yönetici sunucuda `srvmon` kullanıcısını açar (sadece key ile giriş, sudo ve docker grubu yok), agent'ı root olarak kurar ve ayarına `"socket_group": "srvmon"` yazar. Böylece agent'ın soketini yalnızca root ve `srvmon` kullanabilir. Hazır script `docs/BRIEFING-monitoring-user.md` içinde.
-- Sen uygulamada **Settings → This iPhone's SSH key → Copy key only** ile key'i kopyalarsın; yönetici onu `/home/srvmon/.ssh/authorized_keys` dosyasına ekler.
-- Sunucu eklerken **User** alanına `srvmon` yazıp **iPhone key**'i seçersin. Düğme **Connect to existing agent** olur; uygulama hiçbir şey kurmaz, agent'ın bu kullanıcıya cevap verdiğini kontrol edip sunucuyu kaydeder.
+- Sunucu eklerken **User** alanına `srvmon` yazıp **iPhone key**'i seçersin. Setup bölümünde **Server setup script** düğmesi çıkar. Açılan ekran her şeyi telefonda üretir:
+  1. **Agent dosyası:** İşlemci türünü seç (amd64 / arm64), **Share binary** ile dosyayı Mac'e AirDrop'la ya da Dosyalar'a kaydet, sonra `scp` komutuyla (kopyalanabilir) sunucuya `/tmp/srvmon-agent` olarak gönder.
+  2. **Script:** iPhone key'i içine yazılmış hazır script. **Copy script** ya da **Share script** ile al, sunucuda root olarak çalıştır. Script `srvmon` kullanıcısını açar (sadece key ile giriş, sudo ve docker grubu yok), sshd'de bu kullanıcı için forwarding'i kapatır, agent'ı `"socket_group": "srvmon"` ayarıyla kurar ve sonunda kendini test eder; son satır `OK` olmalı. Aynı script daha sonra agent güncellemek için de kullanılır; kullanıcıya, key'e ve ayara dokunmaz.
+  3. Uygulamaya dönüp **Connect to existing agent**'a bas. Uygulama hiçbir şey kurmaz; agent'ın bu kullanıcıya cevap verdiğini kontrol edip sunucuyu kaydeder.
+  - Sunucu yöneticisine verilecek açıklama ve adımlar: `docs/SRVMON-USER.md`.
 - Böyle bir sunucuda ··· menüsünde **Update agent** ve "Remove and uninstall agent" görünmez; sarı güncelleme şeridi de düğmesiz çıkar ("update it on the server"). Agent güncellemesi sunucuda yöneticinin yaptığı bir iştir (aynı script yeni binary ile tekrar çalıştırılır).
 - Dikkat: agent root çalıştığı için bu kullanıcı, uygulama üzerinden agent'ın bütün API'sini kullanabilir: container'ları durdurup başlatmak, dosya okuyup düzenlemek ve silmek dahil. Key'i kimin taşıdığı önemlidir.
 

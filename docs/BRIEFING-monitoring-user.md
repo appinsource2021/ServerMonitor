@@ -211,6 +211,8 @@ userdel -r srvmon; groupdel srvmon 2>/dev/null
 
 ## 6. Tek parça kurulum scripti (3.1 + 3.2 + 3.3 + 3.5)
 
+Uygulama da aynı scripti üretir: sunucu eklerken User `srvmon` yazılınca **Server setup script** düğmesi çıkar; script iPhone key'i, kullanıcı adı ve binary hash'i doldurulmuş olarak kopyalanır veya paylaşılır, binary de aynı ekrandan paylaşılır. Aşağıdaki metin elle çalıştırmak isteyenler içindir.
+
 Aynı script ilk kurulumda ve her agent güncellemesinde kullanılır; var olan kullanıcıya, key'e ve ayar dosyasına dokunmaz.
 
 **Önce, Mac'ten (yönetim penceresi açıkken):**

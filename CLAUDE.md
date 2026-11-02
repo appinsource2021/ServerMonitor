@@ -91,7 +91,8 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - `ServerRecord.externalAgent == true` marks a server the app logs into as a non-root user; `managesAgent` is false then (also for relay servers).
 - `Installer.run`: the probe also runs `srvmon-agent api GET /v1/health` as the login user. uid ≠ 0 and `HTTP 200` → attach: upload/install steps are skipped, health is checked, the record is saved with `externalAgent`. uid ≠ 0 without an answering agent → error naming the briefing. Root behaves as before.
 - Hidden for such servers: ··· → Update agent, "Remove and uninstall agent", and the button on the yellow update strip (the strip only says to update on the server).
-- `AddServerView`: a non-root User shows a banner, hides the "Container actions" toggle (the config is the admin's) and the button reads "Connect to existing agent".
+- `AddServerView`: a non-root User shows a banner, hides the "Container actions" toggle (the config is the admin's) and the button reads "Connect to existing agent". Its "Server setup script" button opens `MonitoringSetupView` (`UI/MonitoringSetupView.swift`): arch picker, `ShareLink` of the bundled binary plus the scp command, and the script from `MonitoringSetupScript.make` with the iPhone key, user, server name and the binary's sha filled in (copy or share as `srvmon-setup.sh`). The script is the one in `docs/BRIEFING-monitoring-user.md` §6, parameterised; keep the two in step.
+- `BundledAgent.binaryURL(arch:)` and `sha256(arch:)` read the bundle for that sheet.
 - Agent 0.3.5: `fsPrepareUploadDir` makes `/var/lib/srvmon/upload` `root:<socket_group> 0770` so the SSH user can write uploads over SFTP; `fsImport` gives a new file the owner of its folder (an upload by `srvmon` no longer lands as `srvmon`).
 - Everything else (health check, disk, file manager, terminal, relay enrol) goes through the agent API or the user's own shell and works unchanged. The agent runs as root, so the non-root key holder has the full API, file edits included.
 
@@ -109,7 +110,9 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 3. File manager follow-ups if wanted: rename/move, download to the phone, edit files over 64 KB (would need SFTP for the content).
 4. Relay setup assistant inside the app (Team → Set up relay → "Install on one of my servers"): SSH in like the agent installer, relay as a single Go binary under systemd, Caddy (or an existing Nginx vhost) for TLS on the domain, token generated and saved automatically, DNS checked. Suleyman asked for this on 2026-11-02.
 5. Promo website for the app; the natural place is the relay's root URL (static page, API below it).
-6. Agent self-update through the API for non-root servers (upload over SFTP, agent verifies the hash and replaces itself) would give "Update now" on 208 too. Not started.
+6. Publish the `srvmon` user explanation. Suleyman (2026-11-02) wants the way the app monitors "through a `srvmon` user on each server" explained with steps where users see it: on the official website and in the app's setup. Text: `docs/SRVMON-USER.md` (Turkish, written for server admins; an English version is needed for the website). In the app the steps live in `MonitoringSetupView`.
+7. Consider making `srvmon` the login the app keeps even after a root install (the installer would create the user and switch the record to it, so the app never holds root). Needs agent self-update first (item 8), because Update agent and Terminal use root today.
+8. Agent self-update through the API for non-root servers (upload over SFTP, agent verifies the hash and replaces itself) would give "Update now" on 208 too. Not started.
 
 ## Folder notes
 - `_old/` holds the zips that were used to sync from a cloud session. It is safe to delete.
