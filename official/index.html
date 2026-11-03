@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server Monitor by appinsource</title>
+<meta name="description" content="An iPhone app that watches your Linux servers over SSH: CPU, memory, disk, Docker, systemd, logs, alerts, files and a real terminal. The agent listens only on a local socket, so no port is opened.">
+<link rel="canonical" href="https://monitor.appinsource.eu/">
+<meta name="theme-color" content="#0B0D10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F6F7F9" media="(prefers-color-scheme: light)">
+<meta property="og:title" content="Server Monitor by appinsource">
+<meta property="og:description" content="Your Linux servers, on your iPhone. No open ports.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://monitor.appinsource.eu/">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="stylesheet" href="assets/site.css">
+<script>try{var t=localStorage.getItem('sm-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href="./" aria-label="appinsource">app<span class="in">in</span>source</a>
+    <span class="product">Server Monitor</span>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav id="site-nav" class="nav" aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#security">Security</a>
+      <a href="#team">Team</a>
+      <a href="srvmon-user.html">srvmon user</a>
+      <a href="#faq">FAQ</a>
+      <div class="theme" role="group" aria-label="Theme">
+        <button type="button" data-theme-set="" aria-pressed="true">Auto</button>
+        <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+        <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+      </div>
+      <a class="btn btn-primary btn-sm" href="mailto:developer@appinsource.eu?subject=Server%20Monitor%3A%20access%20request">Request access</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <h1>Your Linux servers, on your iPhone. No open ports.</h1>
+      <p class="lead">Server Monitor logs in over SSH with a key that never leaves your phone and talks to a small agent that listens only on a local socket. CPU, memory, disk, Docker, systemd, logs, alerts, files and a real terminal. Nothing is exposed to the internet.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="mailto:developer@appinsource.eu?subject=Server%20Monitor%3A%20access%20request">Request access</a>
+        <a class="btn btn-secondary" href="#how">See how it works</a>
+      </div>
+      <ul class="facts" aria-label="Key facts">
+        <li>No open ports</li>
+        <li>One static Go binary per server</li>
+        <li>Keys stay in the iPhone Keychain</li>
+        <li>Linux amd64 and arm64</li>
+      </ul>
+    </div>
+
+    <div class="phone" role="img" aria-label="The Servers screen of the app: four server cards, each with a status, CPU, memory and disk bars and the number of containers. The card with a problem is at the top.">
+      <div class="app">
+        <span class="island"></span>
+        <span class="clock">9:41</span>
+        <span class="batt"></span>
+        <div class="title">Servers</div>
+
+        <div class="card">
+          <div class="row"><span class="mark crit"></span><span class="name">romon-prod</span><span class="chip crit">Critical</span></div>
+          <div class="row"><span class="sub">Disk 93% on /</span></div>
+          <div class="bars">
+            <div class="bar" style="--v:34"><b>CPU <span>34%</span></b><i></i></div>
+            <div class="bar" style="--v:71"><b>RAM <span>71%</span></b><i></i></div>
+            <div class="bar crit" style="--v:93"><b>Disk <span>93%</span></b><i></i></div>
+          </div>
+          <div class="foot"><span>12 containers</span><span>up 41 d</span></div>
+        </div>
+
+        <div class="card">
+          <div class="row"><span class="mark warn"></span><span class="name">mcp-dev</span><span class="chip warn">Warning</span></div>
+          <div class="row"><span class="sub">CPU above 90% for 6 min</span></div>
+          <div class="bars">
+            <div class="bar crit" style="--v:92"><b>CPU <span>92%</span></b><i></i></div>
+            <div class="bar" style="--v:58"><b>RAM <span>58%</span></b><i></i></div>
+            <div class="bar" style="--v:61"><b>Disk <span>61%</span></b><i></i></div>
+          </div>
+          <div class="foot"><span>5 containers</span><span>up 12 d</span></div>
+        </div>
+
+        <div class="card">
+          <div class="row"><span class="mark ok"></span><span class="name">build-01</span><span class="chip ok">Healthy</span></div>
+          <div class="bars">
+            <div class="bar" style="--v:12"><b>CPU <span>12%</span></b><i></i></div>
+            <div class="bar" style="--v:38"><b>RAM <span>38%</span></b><i></i></div>
+            <div class="bar" style="--v:44"><b>Disk <span>44%</span></b><i></i></div>
+          </div>
+          <div class="foot"><span>3 containers</span><span>up 97 d</span></div>
+        </div>
+
+        <div class="card">
+          <div class="row"><span class="mark ok"></span><span class="name">n8n-box</span><span class="chip ok">Healthy</span></div>
+          <div class="bars">
+            <div class="bar" style="--v:8"><b>CPU <span>8%</span></b><i></i></div>
+            <div class="bar" style="--v:52"><b>RAM <span>52%</span></b><i></i></div>
+            <div class="bar" style="--v:37"><b>Disk <span>37%</span></b><i></i></div>
+          </div>
+          <div class="foot"><span>2 containers</span><span>up 8 d</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <div class="wrap">
+    <h2>How it connects</h2>
+    <p class="intro">There is no cloud in between and nothing new to expose. The app uses the SSH you already run. For your team, the server dials out.</p>
+
+    <div class="diagram-scroll">
+      <svg class="diagram" viewBox="0 0 1120 320" role="img" aria-labelledby="diag-title diag-desc">
+        <title id="diag-title">How Server Monitor connects</title>
+        <desc id="diag-desc">Your iPhone reaches the server over SSH on port 22 using the iPhone's key. On the server, sshd runs the agent command, which talks to srvmon-agent over a unix socket. The agent reads /proc, the Docker API, systemd and the journal. For team members the agent connects outbound over HTTPS to a relay behind your reverse proxy, and the members' phones talk to the relay over HTTPS.</desc>
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="arrhead"/></marker>
+        </defs>
+
+        <text x="100" y="86" text-anchor="middle" class="t2">Your iPhone</text>
+        <rect class="box inner" x="40" y="100" width="120" height="180" rx="22"/>
+        <rect x="52" y="112" width="96" height="156" rx="14" fill="#0B0D10"/>
+        <text x="100" y="186" text-anchor="middle" class="bold" fill="#ECEEF1" style="fill:#ECEEF1">Server Monitor</text>
+        <text x="100" y="206" text-anchor="middle" class="t3" style="fill:#A3AAB4">admin</text>
+
+        <line class="flow" x1="162" y1="190" x2="396" y2="190" marker-end="url(#arr)"/>
+        <text x="280" y="174" text-anchor="middle">SSH, port 22</text>
+        <text x="280" y="212" text-anchor="middle" class="t2">with the iPhone's own key</text>
+
+        <text x="420" y="86" class="t2">Your server</text>
+        <rect class="box" x="400" y="100" width="340" height="180" rx="18"/>
+        <rect class="box inner" x="420" y="150" width="92" height="44" rx="10"/>
+        <text x="466" y="177" text-anchor="middle" class="mono">sshd</text>
+        <line class="wire" x1="512" y1="172" x2="572" y2="172"/>
+        <text x="542" y="138" text-anchor="middle" class="t3">unix socket</text>
+        <rect class="box inner" x="572" y="150" width="148" height="44" rx="10"/>
+        <text x="646" y="177" text-anchor="middle" class="mono">srvmon-agent</text>
+        <path class="wire" d="M646 194 V214 H452 V226 M534 214 V226 M616 214 V226 M688 214 V226"/>
+        <rect class="box inner" x="420" y="226" width="64" height="26" rx="6"/>
+        <text x="452" y="244" text-anchor="middle" class="t3 mono" style="font-size:11px">/proc</text>
+        <rect class="box inner" x="492" y="226" width="84" height="26" rx="6"/>
+        <text x="534" y="244" text-anchor="middle" class="t3" style="font-size:11px">Docker API</text>
+        <rect class="box inner" x="584" y="226" width="64" height="26" rx="6"/>
+        <text x="616" y="244" text-anchor="middle" class="t3" style="font-size:11px">systemd</text>
+        <rect class="box inner" x="656" y="226" width="64" height="26" rx="6"/>
+        <text x="688" y="244" text-anchor="middle" class="t3" style="font-size:11px">journal</text>
+
+        <line class="flow" x1="742" y1="190" x2="786" y2="190" marker-end="url(#arr)"/>
+        <text x="764" y="150" text-anchor="middle" class="t2">HTTPS,</text>
+        <text x="764" y="166" text-anchor="middle" class="t2">outbound</text>
+
+        <rect class="box" x="790" y="168" width="120" height="44" rx="10"/>
+        <text x="850" y="195" text-anchor="middle">Relay</text>
+        <text x="850" y="236" text-anchor="middle" class="t3">behind your reverse proxy</text>
+
+        <line class="flow" x1="978" y1="190" x2="914" y2="190" marker-end="url(#arr)"/>
+        <text x="946" y="174" text-anchor="middle" class="t2">HTTPS</text>
+
+        <text x="1040" y="86" text-anchor="middle" class="t2">Team member</text>
+        <rect class="box inner" x="980" y="100" width="120" height="180" rx="22"/>
+        <rect x="992" y="112" width="96" height="156" rx="14" fill="#0B0D10"/>
+        <text x="1040" y="186" text-anchor="middle" class="bold" style="fill:#ECEEF1">Server Monitor</text>
+        <text x="1040" y="206" text-anchor="middle" class="t3" style="fill:#A3AAB4">viewer</text>
+      </svg>
+    </div>
+
+    <div class="notes">
+      <p><strong>The agent only listens on a unix socket.</strong> It never binds a port. Only root, or a group you name, can reach it.</p>
+      <p><strong>Admins come in over SSH.</strong> Every request is one short <code>srvmon-agent api</code> command on the connection you already have.</p>
+      <p><strong>Team members never get SSH.</strong> The agent connects out to the relay, and checks every member request itself.</p>
+    </div>
+
+    <ol class="steps">
+      <li>
+        <h3>Add a server</h3>
+        <p>Enter the host and the user. The app connects over SSH, uploads the agent, checks its SHA-256, installs it as a systemd service and waits until it answers. There is nothing to install by hand.</p>
+      </li>
+      <li>
+        <h3>Watch it</h3>
+        <p>Open a server and the app asks the agent every five seconds over the same connection. The agent reads /proc, the Docker socket, systemd and the journal and keeps an hour of history.</p>
+      </li>
+      <li>
+        <h3>Invite your team</h3>
+        <p>Members join with a QR code, not with SSH access. Their phones reach the servers through the relay, and the agent checks the signature and the scope of every request before it answers.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="wrap">
+    <h2>Everything you check by hand, in one place</h2>
+    <p class="intro">The same things you would look at after <code>ssh</code>-ing in, arranged so that a problem is visible before you go looking for it.</p>
+
+    <div class="feature">
+      <div class="feature-text">
+        <h3>Docker, including the engine itself</h3>
+        <p>The Docker card tells you whether the engine answers, whether <code>docker.service</code> runs, how many containers are running, stopped or in trouble, and how much of the host's CPU and memory the containers take. A one-hour chart puts container CPU next to host CPU.</p>
+        <ul>
+          <li>Open a container for its state, restart count and memory, and start, stop or restart it.</li>
+          <li>Live logs with follow, an errors-only filter and search.</li>
+          <li>Container actions can be switched off per server.</li>
+        </ul>
+      </div>
+      <div class="screen app" role="img" aria-label="A server screen: CPU, memory and disk gauges, a one-hour CPU chart, and the Docker card with running, stopped and problem counts.">
+        <div class="row"><span class="mark crit"></span><span class="name" style="font-size:15px">romon-prod</span><span class="chip crit">Critical</span></div>
+        <div class="subtitle">Ubuntu 24.04, 8 cores, up 41 d</div>
+        <div class="gauges">
+          <div class="gauge">
+            <svg viewBox="0 0 64 64" aria-hidden="true"><circle class="track" cx="32" cy="32" r="27"/><circle class="val" cx="32" cy="32" r="27" stroke-dasharray="57.7 170"/><text x="32" y="36" text-anchor="middle">34%</text></svg>
+            <div class="lbl">CPU</div><div class="sub">load 1.8</div>
+          </div>
+          <div class="gauge">
+            <svg viewBox="0 0 64 64" aria-hidden="true"><circle class="track" cx="32" cy="32" r="27"/><circle class="val" cx="32" cy="32" r="27" stroke-dasharray="120.4 170"/><text x="32" y="36" text-anchor="middle">71%</text></svg>
+            <div class="lbl">Memory</div><div class="sub">11.4 of 16 GB</div>
+          </div>
+          <div class="gauge crit">
+            <svg viewBox="0 0 64 64" aria-hidden="true"><circle class="track" cx="32" cy="32" r="27"/><circle class="val" cx="32" cy="32" r="27" stroke-dasharray="157.8 170"/><text x="32" y="36" text-anchor="middle">93%</text></svg>
+            <div class="lbl">Disk</div><div class="sub">6.1 GB free</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row"><span class="name">CPU, last hour</span><span class="end sub">host and containers</span></div>
+          <svg class="chart" viewBox="0 0 276 56" preserveAspectRatio="none" aria-hidden="true">
+            <line class="grid" x1="0" y1="28" x2="276" y2="28"/>
+            <polygon class="area" points="0,41 23,42 46,38.5 69,35.5 92,37 115,30 138,32.5 161,34 184,26 207,28.5 230,37 253,39 276,39 276,56 0,56"/>
+            <polyline class="line" points="0,41 23,42 46,38.5 69,35.5 92,37 115,30 138,32.5 161,34 184,26 207,28.5 230,37 253,39 276,39"/>
+            <polyline class="line2" points="0,49 23,49.5 46,47 69,46 92,46.5 115,41 138,43 161,44 184,37 207,39.5 230,46 253,47 276,47"/>
+          </svg>
+        </div>
+        <div class="card">
+          <div class="row"><span class="name">Docker</span><span class="chip ok">Healthy</span></div>
+          <div class="kv">
+            <div>Running <span>12</span></div><div>Stopped <span>1</span></div>
+            <div>Problems <span style="color:#FF6B6B">2</span></div><div>Images <span>31</span></div>
+            <div>Container CPU <span>18%</span></div><div>Memory <span>4.2 GB</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-text">
+        <h3>A health check you can run, and alerts you don't have to</h3>
+        <p>Health check runs a fresh set of checks on demand: connection time, CPU, load, memory, swap, every disk, inodes, Docker, problem containers, failed services, OOM kills in the last day, clock drift, a pending reboot and whether the other servers are reachable. Each line is green, amber or red, with a hint when it isn't green.</p>
+        <p>Alerts are evaluated on the server by the agent, so they work while the app is closed. The defaults: CPU above 90% for five minutes, memory above 85% for two, disk above 85%, a container that exits with an error or is killed for memory, an unhealthy container, a restart loop, a failed systemd unit, a peer that stops answering. The same alert repeats at most every fifteen minutes and tells you when it is resolved.</p>
+      </div>
+      <div class="screen app" role="img" aria-label="The Health check screen: a list of checks with a status shape and a value on each line. Disk is red with a hint, Containers and Reboot are amber.">
+        <div class="title" style="font-size:17px">Health check</div>
+        <div class="subtitle">romon-prod, just now</div>
+        <div class="list">
+          <div class="item"><span class="mark ok"></span>Connection<span class="end">38 ms</span></div>
+          <div class="item"><span class="mark ok"></span>CPU<span class="end">34%</span></div>
+          <div class="item"><span class="mark ok"></span>Load<span class="end">1.8 on 8 cores</span></div>
+          <div class="item"><span class="mark ok"></span>Memory<span class="end">71%</span></div>
+          <div class="item"><span class="mark ok"></span>Swap<span class="end">0%</span></div>
+          <div class="item"><span class="mark crit"></span><span>Disk /<span class="hint">6.1 GB free. Open Disk to see what takes the space.</span></span><span class="end" style="color:#FF6B6B">93%</span></div>
+          <div class="item"><span class="mark ok"></span>Inodes<span class="end">12%</span></div>
+          <div class="item"><span class="mark ok"></span>Docker<span class="end">answering</span></div>
+          <div class="item"><span class="mark warn"></span><span>Containers<span class="hint">erp-worker restarting, redis-cache unhealthy</span></span><span class="end" style="color:#F5B544">2 problems</span></div>
+          <div class="item"><span class="mark ok"></span>Services<span class="end">0 failed</span></div>
+          <div class="item"><span class="mark ok"></span>OOM kills, 24 h<span class="end">none</span></div>
+          <div class="item"><span class="mark ok"></span>Clock<span class="end">in sync</span></div>
+          <div class="item"><span class="mark warn"></span><span>Reboot<span class="hint">kernel updated</span></span><span class="end" style="color:#F5B544">pending</span></div>
+          <div class="item"><span class="mark ok"></span>Other servers<span class="end">3 of 3</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-text">
+        <h3>Disk space back, without guessing</h3>
+        <p>Disk analysis breaks the disk down into Docker images, build cache, volumes, container logs and layers, each with its reclaimable amount, then lists folders by size and the largest files. Tap into a folder to see what is inside.</p>
+        <p>Smart cleanup separates what is safe from what you should look at first. Build cache, dangling images, oversized container logs, package caches, old journal entries, rotated logs and language package caches are safe. Unused images and <code>node_modules</code> or <code>vendor</code> folders wait for your tick. Anything a running container mounts or a process works in is locked and stays. Volumes are never touched.</p>
+      </div>
+      <div class="screen app" role="img" aria-label="The Smart cleanup screen: a Safe group with ticked items and sizes, a Review first group with an unticked item and a locked folder marked In use, and a button that reads Free up 7.2 GB.">
+        <div class="title" style="font-size:17px">Smart cleanup</div>
+        <div class="subtitle">romon-prod, 93% used</div>
+        <div class="group">Safe</div>
+        <div class="list">
+          <div class="item"><span class="check on"></span>Docker build cache<span class="end">4.8 GB</span></div>
+          <div class="item"><span class="check on"></span>Dangling images<span class="end">1.2 GB</span></div>
+          <div class="item"><span class="check on"></span>Container logs over 50 MB<span class="end">610 MB</span></div>
+          <div class="item"><span class="check on"></span>Old journal entries<span class="end">340 MB</span></div>
+          <div class="item"><span class="check on"></span>APT cache<span class="end">212 MB</span></div>
+        </div>
+        <div class="group">Review first</div>
+        <div class="list">
+          <div class="item"><span class="check"></span>Unused images<span class="end">6.4 GB</span></div>
+          <div class="item"><span class="check" style="opacity:.4"></span><span>node_modules in /srv/erp-frontend<span class="hint"><span class="lock">In use</span> by erp-frontend</span></span><span class="end">1.1 GB</span></div>
+        </div>
+        <div class="primary">Free up 7.2 GB</div>
+      </div>
+    </div>
+
+    <ul class="feature-list">
+      <li><strong>Metrics with history</strong><p>CPU, memory, disk and load, refreshed every five seconds, with the last hour as a chart. Problem servers sort to the top of the list.</p></li>
+      <li><strong>systemd services and the journal</strong><p>Every unit on the server, failed ones first, each with its journal. The Docker engine's own journal sits at the top of the containers list.</p></li>
+      <li><strong>File manager</strong><p>Browse, view and edit files with line numbers and search. Every save makes a backup and writes atomically. Upload from the Files app over SFTP. System paths stay read-only.</p></li>
+      <li><strong>Terminal</strong><p>A real SSH terminal with 256 colors. <code>htop</code>, <code>vim</code> and <code>journalctl -f</code> work as they should, with shortcut keys for the commands you type most.</p></li>
+      <li><strong>Push alerts</strong><p>Notifications come straight from your server through Apple's push service with your own key. No appinsource server is involved.</p></li>
+      <li><strong>Servers watch each other</strong><p>Each agent can ping the others, so you hear about a server that went down from the ones still up.</p></li>
+    </ul>
+  </div>
+</section>
+
+<section class="section" id="security">
+  <div class="wrap">
+    <h2>Built so that the app can't be the weak point</h2>
+    <p class="intro">A monitoring app holds the keys to your servers. These are the rules it keeps.</p>
+
+    <div class="two-col">
+      <ul class="points">
+        <li><strong>No port is opened.</strong><p>The agent listens on <code>/run/srvmon/agent.sock</code>, readable by root or by a group you name. The relay connection, if you use one, is made by the server and goes outbound.</p></li>
+        <li><strong>Passwords are not stored.</strong><p>If a server only accepts a password, the app uses it once to install its own key, then forgets it. Keys live in the iPhone Keychain and are never exported.</p></li>
+        <li><strong>Host keys are pinned.</strong><p>The first connection records the server's host key. If it changes later, the app refuses to connect and tells you why.</p></li>
+        <li><strong>Team requests are signed.</strong><p>Each member's phone signs every request with its own Ed25519 key. The agent checks the signature against the member list that the admin pushed over SSH, applies the member's scope, and rejects replays. A compromised relay can't make an agent do anything a member isn't allowed to do.</p></li>
+        <li><strong>Logs and services are for admins only.</strong><p>Logs can contain secrets and customer data, so Viewers and Operators never receive them. Containers outside a member's scope are filtered on the server and never leave it.</p></li>
+        <li><strong>Files are for the SSH admin only.</strong><p>File requests through the relay get a 403. System paths and the agent's own files are read-only, every save keeps a backup, and writes are atomic.</p></li>
+        <li><strong>The app locks with Face ID.</strong><p>On by default. You can switch it off in Settings.</p></li>
+      </ul>
+
+      <aside class="aside">
+        <h3>What lives where</h3>
+        <table>
+          <tbody>
+            <tr>
+              <th scope="row">Your iPhone</th>
+              <td><ul><li>The private SSH key, in the Keychain</li><li>Server addresses and their host keys</li><li>Your member signing key, if you join a team</li></ul></td>
+            </tr>
+            <tr>
+              <th scope="row">Each server</th>
+              <td><ul><li>The agent, one static binary</li><li><code>/etc/srvmon/config.json</code>: alert rules, member list, push key, root only</li><li>An hour of metrics history</li></ul></td>
+            </tr>
+            <tr>
+              <th scope="row">The relay</th>
+              <td><ul><li>Server names and member names</li><li>Tokens and invites as SHA-256 hashes</li><li>No metrics, no logs, no keys</li></ul></td>
+            </tr>
+            <tr>
+              <th scope="row">appinsource</th>
+              <td>Nothing. There is no backend and no account.</td>
+            </tr>
+          </tbody>
+        </table>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="srvmon">
+  <div class="wrap">
+    <h2>Monitoring without handing over root</h2>
+    <p class="intro">Some servers keep root login locked behind two-factor codes or a maintenance window, and some admins would rather not give an app root at all. For those, monitoring goes through a user that can do one thing.</p>
+
+    <div class="srvmon">
+      <div>
+        <p>The server's admin creates a <code>srvmon</code> user once. It can log in only with the iPhone's key, has no password, no sudo, is not in the docker group and cannot forward ports. The app logs in as <code>srvmon</code> and talks to the same agent, which runs as a service the admin installed. Root login stays exactly as it was.</p>
+        <p>The app generates everything the admin needs: the agent binary for the server's architecture and a setup script with this iPhone's key already in it. Running the script again later updates the agent and keeps the user, the keys and the config.</p>
+        <p><a href="srvmon-user.html">Read the guide for server admins</a></p>
+      </div>
+      <ol class="steps">
+        <li><h3>Generate the script</h3><p>In the app: Servers, add, User <code>srvmon</code>, then Server setup script. Share the binary and copy the script.</p></li>
+        <li><h3>Copy the binary to the server</h3><p>With the <code>scp</code> command the app shows, to <code>/tmp/srvmon-agent</code>.</p></li>
+        <li><h3>Run the script as root</h3><p>It creates the user, adds the key, installs the agent and tests itself. The last line is <code>OK</code>.</p></li>
+        <li><h3>Connect</h3><p>Back in the app, tap Connect to existing agent. The app installs nothing and saves the server.</p></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="team">
+  <div class="wrap">
+    <h2>Give your team a view, not your keys</h2>
+    <p class="intro">Members get a role and, per server, a scope. Both are enforced by the agent on the server, not by the app on their phone.</p>
+
+    <div class="two-col">
+      <div>
+        <h3>Roles</h3>
+        <div class="table-scroll">
+          <table class="roles">
+            <thead><tr><th scope="col"></th><th scope="col">Viewer</th><th scope="col">Operator</th><th scope="col">Admin</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Server health: CPU, memory, disk</th><td>yes</td><td>yes</td><td>yes</td></tr>
+              <tr><th scope="row">Containers in scope and their state</th><td>yes</td><td>yes</td><td>all containers</td></tr>
+              <tr><th scope="row">Start, stop, restart</th><td>no</td><td>yes</td><td>yes</td></tr>
+              <tr><th scope="row">Container logs, systemd services</th><td>no</td><td>no</td><td>yes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted">Invites are QR codes or links, valid for 48 hours and usable once. Revoking a member takes effect immediately.</p>
+      </div>
+      <div>
+        <h3>Scopes</h3>
+        <p class="muted">A scope is a pattern over container name, image or compose project. Set it per member and per server.</p>
+        <ul class="scopes">
+          <li><code>erp-*</code><span>erp-backend, erp-db, erp-frontend, and whatever you add later</span></li>
+          <li><code>n8n</code><span>Only the container, image or project named exactly n8n</span></li>
+          <li><code>*db*</code><span>Everything with db in its name</span></li>
+          <li><code>*</code><span>Every container on that server</span></li>
+          <li><span class="muted">empty</span><span>No containers. Server health only.</span></li>
+        </ul>
+        <h3 style="margin-top:28px">The relay</h3>
+        <p class="muted">A single Go binary, or a container, that you run behind your own reverse proxy. Agents long-poll it outbound; members' phones call it over HTTPS. It routes requests and stores names and hashed tokens, nothing more.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="requirements">
+  <div class="wrap">
+    <h2>What you need</h2>
+    <ul class="reqs">
+      <li><strong>An iPhone with iOS 17 or newer</strong><span>One app for admins and team members alike.</span></li>
+      <li><strong>Linux servers with systemd</strong><span>Ubuntu, Debian and the RHEL family, on amd64 or arm64. SSH reachable from the phone. Alpine is not supported.</span></li>
+      <li><strong>Docker is optional</strong><span>Without it you still get metrics, services, the journal, alerts, the health check, disk tools, files and the terminal.</span></li>
+      <li><strong>For push alerts, an Apple push key</strong><span>From a paid Apple Developer account. Everything else works without one.</span></li>
+      <li><strong>For team access, the relay</strong><span>Reachable over HTTPS from the servers and from the members' phones.</span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="section" id="faq">
+  <div class="wrap">
+    <h2>Questions</h2>
+    <div class="faq">
+      <details>
+        <summary>Does it open any port on my servers?</summary>
+        <p>No. The agent listens on a unix socket. The app comes in through SSH, which you already run. For team access the server connects out to the relay over HTTPS; nothing connects in.</p>
+      </details>
+      <details>
+        <summary>Does the agent send data anywhere?</summary>
+        <p>Only to your phone over your SSH session, and to the relay if you set one up. There is no appinsource backend, and this site has no analytics.</p>
+      </details>
+      <details>
+        <summary>What if I lose my phone?</summary>
+        <p>Remove its key from each server. On the server, one line does it: <code>sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys</code>. For a <code>srvmon</code> user, edit that user's <code>authorized_keys</code> instead. Team members are revoked from the app and lose access at once.</p>
+      </details>
+      <details>
+        <summary>Do I need Docker?</summary>
+        <p>No. The Docker card and the containers list simply stay empty. Everything else works.</p>
+      </details>
+      <details>
+        <summary>Can team members read logs?</summary>
+        <p>Only Admins. Viewers see server health and the containers in their scope. Operators can also start, stop and restart those containers.</p>
+      </details>
+      <details>
+        <summary>Can I run the relay myself?</summary>
+        <p>That is the only way it runs. It is a single Go binary or a Docker container behind your own reverse proxy, with a token you keep.</p>
+      </details>
+      <details>
+        <summary>How do I get the app?</summary>
+        <p>It is not on the App Store yet. Write to us and we will set it up with you on your iPhone.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<section class="cta">
+  <div class="wrap">
+    <div>
+      <h2>See your servers from your pocket</h2>
+      <p>Tell us how many servers you run and whether a team needs access. You will hear back from a person, not a form.</p>
+    </div>
+    <a class="btn btn-primary" href="mailto:developer@appinsource.eu?subject=Server%20Monitor%3A%20access%20request">Request access</a>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <a class="wordmark" href="./" aria-label="appinsource">app<span class="in">in</span>source</a>
+    <nav aria-label="Footer">
+      <a href="srvmon-user.html">Guide for server admins</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="mailto:developer@appinsource.eu">Contact</a>
+    </nav>
+    <p class="credit">Server Monitor is designed and developed by Süleyman Topaloğlu, appinsource.</p>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

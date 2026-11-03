@@ -20,8 +20,9 @@ Dedicated sunucuları iPhone'dan izlemek için bir uygulama: CPU, RAM, disk, Doc
 10. [Sorun giderme](#10-sorun-giderme)
 11. [Agent'ı sunucuda yönetmek](#11-agentı-sunucuda-yönetmek)
 12. [Güvenlik](#12-güvenlik)
-13. [Marka yazımı: appinsource](#13-marka-yazımı-appinsource)
-14. [Geliştirme](#14-geliştirme)
+13. [Planlar: Free, Trial, Pro](#13-planlar-free-trial-pro)
+14. [Marka yazımı: appinsource](#14-marka-yazımı-appinsource)
+15. [Geliştirme](#15-geliştirme)
 
 ---
 
@@ -48,6 +49,7 @@ iPhone ──SSH (22)──▶ sunucu          iPhone ──HTTPS──▶ relay
 | `agent/` | Sunucuya kurulan `srvmon-agent` (Go) |
 | `relay/` | Ekip erişimi için relay sunucusu (Go + Docker) |
 | `e2e/` | Relay ve agent'ı birlikte deneyen uçtan uca test |
+| `official/` | Tanıtım sitesi (İngilizce, statik; `monitor.appinsource.eu` kökünde yayınlanacak). Yayınlama notları `official/README.md` |
 
 ## 3. Uygulamayı iPhone'a kurmak
 
@@ -418,7 +420,28 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys   # iPhone key'i de kaldı
 - **Dosya yöneticisi yalnızca SSH ile bağlanan admin içindir.** Relay üzerinden gelen üyeler dosya isteklerinde 403 alır. Sistem klasörleri yazma ve silmeye kapalıdır; her kayıttan önce yedek alınır ve yazma atomiktir (yarım dosya kalmaz).
 - **Uygulama kilidi:** Uygulama Face ID ile kilitlenir. **Settings → Security** bölümünden kapatılabilir.
 
-## 13. Marka yazımı: appinsource
+## 13. Planlar: Free, Trial, Pro
+
+Uygulama ürün olarak çıkınca üç planı olacak. Bugün satın alma yok; herkes Pro'dur ve hiçbir şey kilitli değildir. Satın alma (App Store, ücretli Apple hesabı gerekir) eklenince kurallar şunlar olacak:
+
+| | Free | Trial (ilk 14 gün) | Pro |
+|---|---|---|---|
+| Sunucu | 1 | sınırsız | sınırsız |
+| İzleme, Docker ve servis listeleri, health check, uygulama içi alarmlar | var | var | var |
+| Terminal | yok | var | var |
+| Dosya yöneticisi, disk analizi, smart cleanup | yok | var | var |
+| Container ve servis start/stop/restart, servis kurma | yok | var | var |
+| Push bildirimi | yok | var | var |
+| Ekip (Team) ve relay | yok | var | var |
+
+- Free "bak ama dokunma" demek: tek sunucuyu izlersin, değiştiren her şey Pro.
+- Deneme süresi uygulamanın ilk açıldığı gün başlar. Tarih Keychain'de tutulur; uygulamayı silip yeniden kurmak süreyi sıfırlamaz.
+- Deneme bitince hiçbir veri silinmez. İkinci ve sonraki sunucular listede kalır, sadece kilitli ekranlar "Pro gerekiyor" der.
+- Kilitli bir özelliğe dokununca **Server Monitor Pro** sayfası açılır: planın, deneme bitiş tarihi ve Pro'nun içerdiği liste.
+- **Settings → Plan → Simulate:** uygulamanın Free ya da Trial'da nasıl davrandığını görmek için. Sahip olduğun planı değiştirmez; **Off** gerçek plana döner.
+- Sayılar (14 gün, 1 sunucu) ve kilitli özellik listesi tek dosyadadır: `ios/ServerMonitor/Services/Plan.swift`.
+
+## 14. Marka yazımı: appinsource
 
 - Marka adı **her zaman küçük harfle** yazılır: `appinsource`. "AppInSource", "AppInsource" gibi yazımlar yanlış.
 - Logo yazısında yalnızca **in** mavidir:
@@ -430,7 +453,7 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys   # iPhone key'i de kaldı
 
 - iOS'ta `BrandWordmark` bileşeni bunu otomatik olarak uygular (`ios/ServerMonitor/UI/Brand.swift`).
 
-## 14. Geliştirme
+## 15. Geliştirme
 
 ```bash
 # Agent

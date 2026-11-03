@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitoring through a srvmon user</title>
+<meta name="description" content="How a server admin prepares a srvmon user so that Server Monitor can watch a server without root login: key-only user, no sudo, agent on a local socket.">
+<link rel="canonical" href="https://monitor.appinsource.eu/srvmon-user.html">
+<meta name="theme-color" content="#0B0D10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F6F7F9" media="(prefers-color-scheme: light)">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="stylesheet" href="assets/site.css">
+<script>try{var t=localStorage.getItem('sm-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href="./" aria-label="appinsource">app<span class="in">in</span>source</a>
+    <span class="product">Server Monitor</span>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav id="site-nav" class="nav" aria-label="Sections">
+      <a href="./#how">How it works</a>
+      <a href="./#features">Features</a>
+      <a href="./#security">Security</a>
+      <a href="./#team">Team</a>
+      <a href="./#faq">FAQ</a>
+      <div class="theme" role="group" aria-label="Theme">
+        <button type="button" data-theme-set="" aria-pressed="true">Auto</button>
+        <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+        <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+      </div>
+      <a class="btn btn-primary btn-sm" href="mailto:developer@appinsource.eu?subject=Server%20Monitor%3A%20access%20request">Request access</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap doc">
+  <a class="back" href="./">Server Monitor</a>
+  <h1>Monitoring through a <code>srvmon</code> user</h1>
+  <p class="lead">Server Monitor watches your servers from an iPhone. It does not have to log in as root. On a server where root login is locked, or where you would rather not hand root to an app, monitoring goes through a user that exists for this one job: <code>srvmon</code>. This page is for the server's admin and explains how to set it up.</p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>A small program, <strong>srvmon-agent</strong>, runs on the server. It reads CPU, memory, disk, Docker containers, services and logs.</li>
+    <li>The agent <strong>opens no port</strong>. It listens only on a local socket inside the server.</li>
+    <li>The iPhone connects over <strong>SSH</strong> as <code>srvmon</code> and asks the agent its questions through that socket.</li>
+    <li><code>srvmon</code> cannot log in with a password, only with the <strong>SSH key the phone generated</strong>. The phone's private key never leaves the phone.</li>
+    <li><code>srvmon</code> has <strong>no sudo</strong>, is not in the docker group and cannot forward ports. The only thing it can do is talk to the agent.</li>
+    <li>Whatever your root login looks like, it stays that way. This setup does not touch root's settings.</li>
+  </ul>
+
+  <h2>Two ways to add a server</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th scope="col"></th><th scope="col">When</th><th scope="col">What you do</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">The app installs it</th><td>Root can log in over SSH</td><td>Add the server as root in the app. The app installs the agent. You do not need this page.</td></tr>
+        <tr><th scope="row">You prepare it (this page)</th><td>Root login is locked, asks for a second factor, or you do not want to give the app root</td><td>Create the <code>srvmon</code> user and install the agent once, with the steps below.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>What you need</h2>
+  <ul>
+    <li><strong>Root on the server, once</strong>, from a terminal, a hosting panel or through an admin.</li>
+    <li><strong>systemd</strong> on the server: Ubuntu, Debian or the RHEL family. Alpine is not supported.</li>
+    <li>Two things the app generates for you. In the app: <strong>Servers, add, type <code>srvmon</code> in User, tap Server setup script</strong>.
+      <ol>
+        <li>The <strong>agent binary</strong> (<code>srvmon-agent-linux-amd64</code> or <code>arm64</code>). Share binary sends it to a Mac by AirDrop or saves it to Files.</li>
+        <li>The <strong>setup script</strong>, with this phone's SSH key already written into it. Copy script or Share script.</li>
+      </ol>
+    </li>
+  </ul>
+
+  <h2>Steps</h2>
+  <ol>
+    <li><strong>Copy the agent binary to the server.</strong> Use the <code>scp</code> command the app shows. The file must land at <code>/tmp/srvmon-agent</code>:
+<pre><code>scp srvmon-agent-linux-amd64 root@SERVER:/tmp/srvmon-agent</code></pre>
+    </li>
+    <li><strong>Run the script on the server as root.</strong> Paste it into a file and run <code>sh srvmon-setup.sh</code>, or paste its contents straight into a root shell.</li>
+    <li><strong>Check the last line.</strong> The script tests itself and ends with <code>OK</code>. An <code>HTTP 200</code> line shows that the agent answers the <code>srvmon</code> user.</li>
+    <li><strong>Connect in the app.</strong> On the add-server screen: User <code>srvmon</code>, login method iPhone key, then <strong>Connect to existing agent</strong>. The app installs nothing. It checks that the agent answers and saves the server.</li>
+  </ol>
+
+  <h2>What the script does, exactly</h2>
+  <ol>
+    <li>Creates the <code>srvmon</code> group and user. The password is locked; the home directory is <code>/home/srvmon</code>.</li>
+    <li>Adds the phone's public key to <code>/home/srvmon/.ssh/authorized_keys</code>. The same key is never added twice.</li>
+    <li>Writes <code>/etc/ssh/sshd_config.d/40-srvmon.conf</code>: for <code>srvmon</code>, password and interactive login are off, and TCP, agent and X11 forwarding are off. It validates the config with <code>sshd -t</code> and reloads sshd. Other users' settings are untouched.</li>
+    <li>Verifies the SHA-256 of the agent binary and installs it as <code>/usr/local/bin/srvmon-agent</code>.</li>
+    <li>Creates <code>/etc/srvmon/config.json</code> if it does not exist: server name, socket path, <code>"socket_group": "srvmon"</code> and <code>"allow_actions": true</code> (start, stop and restart of containers from the app). An existing file is left as it is.</li>
+    <li>Writes the <code>srvmon-agent</code> systemd service, enables it at boot and starts it. The service runs as root (it needs the Docker socket and the journal) and opens its socket <code>/run/srvmon/agent.sock</code> as <code>root:srvmon 0660</code>.</li>
+    <li>Tests itself: agent version, a health query as <code>srvmon</code>, the socket's permissions, the user's groups.</li>
+  </ol>
+  <p>Running the script again is <strong>safe</strong>: the user, the keys and the config are kept. This is also how the agent is updated: copy the new binary to <code>/tmp/srvmon-agent</code> and run the script again. When a server's agent is older than the app's, the app shows a yellow strip on that server's card.</p>
+
+  <h2>More than one iPhone</h2>
+  <p>Each phone has its own key. On the second phone, follow the same path: get the script from that phone's app and run it on the server. It adds that phone's key and keeps the earlier ones.</p>
+
+  <h2>Security notes</h2>
+  <div class="callout">
+    <p><code>srvmon</code> gets no root rights in a shell. But the agent runs as root, so through the app every feature of the agent is available: starting and stopping containers, reading logs, and reading, editing, deleting and uploading files with the file manager (system paths and <code>/etc/srvmon</code> are protected). <strong>Whoever holds the phone's key holds that power.</strong> If you lose the phone, delete its key from <code>/home/srvmon/.ssh/authorized_keys</code>.</p>
+  </div>
+  <ul>
+    <li>If you do not want container actions, set <code>"allow_actions": false</code> in <code>/etc/srvmon/config.json</code> and run <code>systemctl restart srvmon-agent</code>.</li>
+    <li>The setup opens no port, does not touch the firewall and does not change root login.</li>
+  </ul>
+
+  <h2>Removing it</h2>
+<pre><code>systemctl disable --now srvmon-agent
+rm -f /etc/systemd/system/srvmon-agent.service /usr/local/bin/srvmon-agent
+rm -rf /etc/srvmon /var/lib/srvmon /etc/ssh/sshd_config.d/40-srvmon.conf
+systemctl daemon-reload &amp;&amp; sshd -t &amp;&amp; systemctl reload ssh
+userdel -r srvmon; groupdel srvmon 2&gt;/dev/null</code></pre>
+
+  <h2>Troubleshooting</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th scope="col">Symptom</th><th scope="col">Cause</th><th scope="col">Fix</th></tr></thead>
+      <tbody>
+        <tr><td>The script says <code>ERROR: /tmp/srvmon-agent missing</code></td><td>The binary was not copied</td><td>Do step 1.</td></tr>
+        <tr><td><code>sha256sum: WARNING: 1 computed checksum did NOT match</code></td><td>The file is damaged or not the version the app has</td><td>Share the binary from the app again and copy it. The script must come from the same app version.</td></tr>
+        <tr><td>App: <strong>srvmon is not root and no agent answered for this user</strong></td><td>The agent is not installed, or <code>socket_group</code> is not set</td><td>Run the script. On the server, <code>sudo -u srvmon /usr/local/bin/srvmon-agent api GET /v1/health</code> must print <code>HTTP 200</code>.</td></tr>
+        <tr><td>App: login error, <code>Permission denied (publickey)</code></td><td>The key was not added, or it is another phone's key</td><td>Run that phone's script. <code>journalctl -u ssh</code> on the server should show <code>Accepted publickey for srvmon</code>.</td></tr>
+        <tr><td>Uploading a file fails with a permission error</td><td>The agent is older than 0.3.5</td><td>Update the agent: run the script again with the new binary.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <a class="wordmark" href="./" aria-label="appinsource">app<span class="in">in</span>source</a>
+    <nav aria-label="Footer">
+      <a href="./">Server Monitor</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="mailto:developer@appinsource.eu">Contact</a>
+    </nav>
+    <p class="credit">Server Monitor is designed and developed by Süleyman Topaloğlu, appinsource.</p>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

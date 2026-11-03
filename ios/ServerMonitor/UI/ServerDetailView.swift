@@ -6,6 +6,8 @@ struct ServerDetailView: View {
     let serverID: UUID
 
     @State private var showHealth = false
+    @State private var locked: Feature?
+    private let plans = PlanStore.shared
 
     private var server: ServerRecord? { store.servers.first { $0.id == serverID } }
     private var state: ServerState { store.states[serverID] ?? ServerState() }
@@ -57,6 +59,17 @@ struct ServerDetailView: View {
                         if server.isRelay {
                             RingGauge(label: "Disk", value: snap.rootDisk?.percent ?? 0,
                                       sub: snap.rootDisk.map { "\(Fmt.bytes($0.usedBytes)) / \(Fmt.bytes($0.totalBytes))" } ?? "—")
+                        } else if !plans.allows(.files) {
+                            Button { locked = .files } label: {
+                                RingGauge(label: "Disk", value: snap.rootDisk?.percent ?? 0,
+                                          sub: snap.rootDisk.map { "\(Fmt.bytes($0.usedBytes)) / \(Fmt.bytes($0.totalBytes))" } ?? "—")
+                                    .overlay(alignment: .topTrailing) {
+                                        Image(systemName: "lock.circle.fill").font(.system(size: 14))
+                                            .foregroundStyle(Theme.text2).padding(8)
+                                    }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Disk analysis needs Pro")
                         } else {
                             NavigationLink { DiskUsageView(server: server) } label: {
                                 RingGauge(label: "Disk", value: snap.rootDisk?.percent ?? 0,
@@ -95,6 +108,7 @@ struct ServerDetailView: View {
         }
         .refreshable { await store.refresh(server) }
         .sheet(isPresented: $showHealth) { HealthCheckView(server: server) }
+        .sheet(item: $locked) { PlanSheet(reason: $0) }
         .toolbar {
             // Separate, equatable view: data refreshes never redraw the open menu.
             if !server.isRelay {
@@ -106,8 +120,12 @@ struct ServerDetailView: View {
     private func toolsRow(_ server: ServerRecord) -> some View {
         HStack(spacing: 8) {
             Button { showHealth = true } label: { toolLabel("Health check", "stethoscope") }
-            NavigationLink { TerminalScreen(server: server, sshSession: store.session(for: server)) } label: {
-                toolLabel("Terminal", "terminal")
+            if plans.allows(.terminal) {
+                NavigationLink { TerminalScreen(server: server, sshSession: store.session(for: server)) } label: {
+                    toolLabel("Terminal", "terminal")
+                }
+            } else {
+                Button { locked = .terminal } label: { toolLabel("Terminal", "lock") }
             }
         }
         .buttonStyle(.plain)

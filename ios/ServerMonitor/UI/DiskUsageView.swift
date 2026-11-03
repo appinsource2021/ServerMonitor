@@ -15,6 +15,8 @@ struct DiskUsageView: View {
     @State private var error: String?
     @State private var polling = false
     @State private var showCleanup = false
+    @State private var locked: Feature?
+    private let plans = PlanStore.shared
     @State private var stopping = false
     @State private var stoppedLocally = false     // the user pressed Stop; the screen no longer waits
     @State private var stopNote: String?          // what happened on the server side
@@ -66,7 +68,9 @@ struct DiskUsageView: View {
             }
             if path == "/" {
                 Section {
-                    Button { showCleanup = true } label: { Label("Smart cleanup", systemImage: "sparkles") }
+                    Button { if plans.allows(.cleanup) { showCleanup = true } else { locked = .cleanup } } label: {
+                        Label("Smart cleanup", systemImage: plans.allows(.cleanup) ? "sparkles" : "lock")
+                    }
                         .buttonStyle(PrimaryButtonStyle())
                 }
                 .plainRow()
@@ -116,6 +120,7 @@ struct DiskUsageView: View {
         }
         .task { await load(force: false) }
         .refreshable { await load(force: true) }
+        .sheet(item: $locked) { PlanSheet(reason: $0) }
         .sheet(isPresented: $showCleanup) {
             CleanupView(server: server) { Task { docker = nil; await load(force: true) } }
         }

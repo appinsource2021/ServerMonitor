@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy, Server Monitor</title>
+<meta name="description" content="What Server Monitor and this site store, and where. There is no appinsource backend, no account and no analytics.">
+<link rel="canonical" href="https://monitor.appinsource.eu/privacy.html">
+<meta name="theme-color" content="#0B0D10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F6F7F9" media="(prefers-color-scheme: light)">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="stylesheet" href="assets/site.css">
+<script>try{var t=localStorage.getItem('sm-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href="./" aria-label="appinsource">app<span class="in">in</span>source</a>
+    <span class="product">Server Monitor</span>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav id="site-nav" class="nav" aria-label="Sections">
+      <a href="./#how">How it works</a>
+      <a href="./#features">Features</a>
+      <a href="./#security">Security</a>
+      <a href="./#team">Team</a>
+      <a href="srvmon-user.html">srvmon user</a>
+      <a href="./#faq">FAQ</a>
+      <div class="theme" role="group" aria-label="Theme">
+        <button type="button" data-theme-set="" aria-pressed="true">Auto</button>
+        <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+        <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+      </div>
+      <a class="btn btn-primary btn-sm" href="mailto:developer@appinsource.eu?subject=Server%20Monitor%3A%20access%20request">Request access</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap doc">
+  <a class="back" href="./">Server Monitor</a>
+  <h1>Privacy</h1>
+  <p class="lead">Server Monitor is built so that your data stays with you: on your iPhone and on your servers. There is no appinsource backend and no account.</p>
+
+  <h2>This website</h2>
+  <ul>
+    <li>No cookies, no analytics, no embedded fonts or scripts from other companies. The page makes no request to any server other than the one it is served from.</li>
+    <li>Your theme choice (Auto, Light or Dark) is kept in your browser's local storage and never sent anywhere.</li>
+    <li>The web server keeps ordinary access logs for operating the site. They are not shared.</li>
+  </ul>
+
+  <h2>The app</h2>
+  <ul>
+    <li><strong>On your iPhone:</strong> the private SSH key the app generates, in the Keychain; the servers you added, with their addresses and host keys; alert rules; your member signing key if you join a team. Face ID is used only to unlock the app and is handled by iOS.</li>
+    <li><strong>On each server:</strong> the agent and its config file, readable by root only. The config holds the server name, alert rules, the member list and, if you use push alerts, your Apple push key.</li>
+    <li><strong>On the relay, if you run one:</strong> server names, member names, roles and scopes, and tokens and invites as SHA-256 hashes. The relay passes requests between members' phones and your agents and does not keep metrics or logs.</li>
+    <li><strong>Push notifications:</strong> sent from your server to Apple's push service with your own key. appinsource is not involved.</li>
+    <li><strong>What we receive:</strong> only what you write to us by email.</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p><a href="mailto:developer@appinsource.eu">developer@appinsource.eu</a></p>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <a class="wordmark" href="./" aria-label="appinsource">app<span class="in">in</span>source</a>
+    <nav aria-label="Footer">
+      <a href="./">Server Monitor</a>
+      <a href="srvmon-user.html">Guide for server admins</a>
+      <a href="mailto:developer@appinsource.eu">Contact</a>
+    </nav>
+    <p class="credit">Server Monitor is designed and developed by Süleyman Topaloğlu, appinsource.</p>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

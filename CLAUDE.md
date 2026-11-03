@@ -116,13 +116,26 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Child screens run their own 5-second refresh loop: a `.task` on the server screen is cancelled while a pushed screen covers it.
 - The filter helper is `TextFilter.matches` (moved out of `ServerDetailView`).
 
+## Website (`official/`, 2026-11-03)
+- Static promo site in English, no build step, no external requests (no Google Fonts: GDPR; no analytics, no cookies). Files: `index.html`, `srvmon-user.html` (English `docs/SRVMON-USER.md`), `privacy.html`, `assets/site.css`, `assets/site.js`, `assets/img/`.
+- Planned home `https://monitor.appinsource.eu/`, same host as the relay: site at `/`, relay routes proxied. Caddy and Nginx snippets in `official/README.md`. Preview: `python3 -m http.server -d official 8000`.
+- Colors mirror `Theme.swift`; the brand wordmark is `.wordmark` (`in` blue). The mock screens (`.app`) always keep the app's dark look. Status is shown by shape and color, as in the app.
+- CTA is `mailto:developer@appinsource.eu` ("Request access") until the app is on the App Store. No version numbers on the pages.
+- The steps in `srvmon-user.html` must match `MonitoringSetupView` and `MonitoringSetupScript.make`; change all three together.
+
+## Plans (app 0.4.0, `Services/Plan.swift`, `UI/PlanView.swift`)
+- `Feature` lists everything a plan can lock; `PlanConfig` holds the numbers (`trialDays` 14, `freeServerLimit` 1, `freeFeatures` empty = Free is watch only, `purchasesEnabled` **false**).
+- `PlanStore.shared.plan` is `.pro` while `purchasesEnabled` is false, so nothing is locked today. StoreKit sets `purchased` later. The trial start date is in the Keychain (`plan.trialStarted`); `simulated` (UserDefaults `plan.simulated`) is the Settings → Plan → Simulate switch.
+- Gates: screens ask `plans.allows(.x)` and open `PlanSheet(reason:)` when locked. Gated today: add server beyond the limit (`ServerListView.addServer`), Terminal and Disk (`ServerDetailView`), Smart cleanup (`DiskUsageView`), container buttons (`ContainerDetailView.actionButton`), push section (`SettingsView`), Team tab (`RootView` → `PlanLockedScreen`). New features (service actions, service install) must go through the same check.
+- Decided 2026-11-03 with Suleyman: Free = 1 server, watch only; Trial = 14 days everything; Pro by server-count tiers or a one-time unlock, numbers still open. README § 13.
+
 ## Open work
 1. Deploy the relay; Suleyman has not yet decided where it runs.
 2. Fix the Swift 6 concurrency warnings in `TerminalScreen.swift` (they do not break the build).
 3. File manager follow-ups if wanted: rename/move, download to the phone, edit files over 64 KB (would need SFTP for the content).
 4. Relay setup assistant inside the app (Team → Set up relay → "Install on one of my servers"): SSH in like the agent installer, relay as a single Go binary under systemd, Caddy (or an existing Nginx vhost) for TLS on the domain, token generated and saved automatically, DNS checked. Suleyman asked for this on 2026-11-02.
-5. Promo website for the app; the natural place is the relay's root URL (static page, API below it).
-6. Publish the `srvmon` user explanation. Suleyman (2026-11-02) wants the way the app monitors "through a `srvmon` user on each server" explained with steps where users see it: on the official website and in the app's setup. Text: `docs/SRVMON-USER.md` (Turkish, written for server admins; an English version is needed for the website). In the app the steps live in `MonitoringSetupView`.
+5. Promo website: built in `official/` (see "Website" above). Deployment waits for the relay host (item 1); an OG image and a Turkish page are open.
+6. The `srvmon` user explanation is published: `docs/SRVMON-USER.md` (Turkish), `official/srvmon-user.html` (English, website) and `MonitoringSetupView` (app). Keep the three in step.
 7. Consider making `srvmon` the login the app keeps even after a root install (the installer would create the user and switch the record to it, so the app never holds root). Agent self-update exists since 0.3.6; Terminal would run as `srvmon` then.
 
 ## Folder notes

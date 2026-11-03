@@ -10,6 +10,8 @@ struct SettingsView: View {
     @State private var deploying = false
     @State private var message: String?
     @AppStorage("applock.enabled") private var appLock = true
+    @State private var locked: Feature?
+    private let plans = PlanStore.shared
 
     private var canDeploy: Bool { p8Loaded && keyID.count == 10 && teamID.count == 10 }
 
@@ -20,6 +22,18 @@ struct SettingsView: View {
                     Text("Settings").font(.system(size: 34, weight: .bold)).tracking(-0.6).padding(.top, 8)
 
                     if store.isAdmin {
+                    PlanSection()
+
+                    if !plans.allows(.push) {
+                        VStack(spacing: 8) {
+                            SectionHeader(text: "Push notifications (APNs)")
+                            Button { locked = .push } label: {
+                                Banner(icon: "lock.fill", title: "Push notifications need Pro",
+                                       text: Feature.push.detail, color: Theme.warn)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    } else {
                     VStack(spacing: 8) {
                         SectionHeader(text: "Push notifications (APNs)")
                         ListCard {
@@ -57,6 +71,7 @@ struct SettingsView: View {
                         .opacity(canDeploy ? 1 : 0.5)
                         Text("One key serves every server. To rotate it, revoke the old key in Apple Developer, import the new one here and deploy.")
                             .font(.system(size: 12)).foregroundStyle(Theme.text2).padding(.horizontal, 4)
+                    }
                     }
 
                     VStack(spacing: 8) {
@@ -103,6 +118,7 @@ struct SettingsView: View {
                 let name = url.deletingPathExtension().lastPathComponent
                 if name.hasPrefix("AuthKey_") { keyID = String(name.dropFirst(8)) }
             }
+            .sheet(item: $locked) { PlanSheet(reason: $0) }
             .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
                 Button("OK") { message = nil }
             }

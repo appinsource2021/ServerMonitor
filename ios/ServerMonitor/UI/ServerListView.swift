@@ -4,6 +4,12 @@ struct ServerListView: View {
     @Environment(ServerStore.self) private var store
     @State private var path: [ServerRecord] = []
     @State private var showAdd = false
+    @State private var locked: Feature?
+    private let plans = PlanStore.shared
+
+    private func addServer() {
+        if plans.canAddServer(current: store.servers.count) { showAdd = true } else { locked = .moreServers }
+    }
     @State private var draft: ServerRecord?
 
     var body: some View {
@@ -47,6 +53,7 @@ struct ServerListView: View {
             .sheet(isPresented: $showAdd) {
                 AddServerView()
             }
+            .sheet(item: $locked) { PlanSheet(reason: $0) }
             .sheet(item: $draft) { d in
                 AddServerView(draft: d)
             }
@@ -66,7 +73,7 @@ struct ServerListView: View {
             }
             Spacer()
             if store.isAdmin {
-            Button { showAdd = true } label: {
+            Button { addServer() } label: {
                 Image(systemName: "plus").font(.system(size: 20, weight: .bold))
                     .foregroundStyle(Theme.bg)
                     .frame(width: 44, height: 44)
@@ -119,7 +126,7 @@ struct ServerListView: View {
                 Text("Add your first server").font(.system(size: 17, weight: .semibold))
                 Text("Enter its SSH login once. The app installs a small agent, then shows CPU, memory, disks, Docker containers and logs here.")
                     .font(.system(size: 14)).foregroundStyle(Theme.text2)
-                Button("Add server") { showAdd = true }.buttonStyle(PrimaryButtonStyle())
+                Button("Add server") { addServer() }.buttonStyle(PrimaryButtonStyle())
             }
         }
         .padding(.top, 20)

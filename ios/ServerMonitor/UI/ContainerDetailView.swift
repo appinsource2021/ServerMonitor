@@ -51,6 +51,8 @@ struct ContainerDetailView: View {
     @State private var confirm: String?
     @State private var logReload = 0
     @State private var enabling = false
+    @State private var locked: Feature?
+    private let plans = PlanStore.shared
 
     /// The agent refused because start/stop/restart is switched off in its config.
     private var actionsDisabled: Bool {
@@ -128,6 +130,7 @@ struct ContainerDetailView: View {
             default: nil
             }
         }
+        .sheet(item: $locked) { PlanSheet(reason: $0) }
         .confirmationDialog("\(confirm?.capitalized ?? "") \(containerName)?", isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } }), titleVisibility: .visible) {
             if let a = confirm {
                 Button(a.capitalized, role: a == "stop" ? .destructive : nil) { Task { await run(a) } }
@@ -180,6 +183,7 @@ struct ContainerDetailView: View {
         let dimmed = phase.isWorking && !active
         let fg = primary ? Theme.bg : Theme.text
         return Button {
+            guard plans.allows(.containerActions) else { locked = .containerActions; return }
             // start is harmless: no confirmation
             if action == "start" { Task { await run(action) } } else { confirm = action }
         } label: {

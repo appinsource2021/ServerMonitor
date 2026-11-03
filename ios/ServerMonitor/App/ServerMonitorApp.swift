@@ -126,9 +126,11 @@ struct RootView: View {
                 .badge(store.allActiveAlerts.count)
                 .tag(1)
             if store.isAdmin {
-                TeamView()
-                    .tabItem { Label("Team", systemImage: "person.2") }
-                    .tag(3)
+                Group {
+                    if PlanStore.shared.allows(.team) { TeamView() } else { PlanLockedScreen(feature: .team) }
+                }
+                .tabItem { Label("Team", systemImage: "person.2") }
+                .tag(3)
             }
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
