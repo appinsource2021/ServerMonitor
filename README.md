@@ -320,10 +320,14 @@ location / {
 | **The server refused the connection** | O portta SSH çalışmıyor. | Doğru portu yaz. Sunucuda kontrol: `ss -tlnp \| grep ssh` |
 | **host key changed** | Sunucu yeniden kuruldu ya da IP başka bir makineye geçti. | Bu beklenen bir durumsa sunucuyu uygulamadan sil ve yeniden ekle. Beklenmiyorsa bağlanma. |
 | **srvmon@… did not accept this iPhone's key** | Key `srvmon`'un `authorized_keys` dosyasında yok (scriptteki `IPHONE_KEY` satırı boş kalmış olabilir) ya da sshd `AllowUsers` / `AllowGroups` ile `srvmon`'a izin vermiyor. | Sunucuda: `cat /home/srvmon/.ssh/authorized_keys` (telefonun key'i olmalı), `sshd -T -C user=srvmon,host=x,addr=1.2.3.4 \| grep -Ei 'allowusers\|allowgroups'`, `journalctl -u ssh \| grep srvmon` sebebi yazar. Key eksikse uygulamanın ürettiği scripti tekrar çalıştır. |
+| **Agent update needed** şeridi script sonrası kalıyor | Script yeni dosyayı sunucuda bulamadı ("keeping the installed agent …") | Önce dosyayı sunucuya koy: şerit → **Get files** → **Send to server** (ya da `scp … :/tmp/srvmon-agent`), sonra scripti tekrar çalıştır. Çıktıda `== 3. agent` altında `…: OK` ve yeni sürüm görünmeli. |
+| **Send to server: SFTP failed: permission denied** | `/var/lib/srvmon` klasörüne `srvmon` giremiyor (agent < 0.3.7) | Sunucuda: `chgrp srvmon /var/lib/srvmon && chmod 750 /var/lib/srvmon`. Agent 0.3.7'den itibaren kendisi düzeltir. |
 | **… is not root and no agent answered for this user** | root dışında bir kullanıcıyla giriş yapıldı ama sunucuda bu kullanıcıya açık bir agent yok. | Ya `root` ile gir (uygulama kurar), ya da yönetici izleme kullanıcısını ve agent'ı `socket_group` ile hazırlasın (Bölüm 4, "Root olmayan kullanıcıyla bağlanmak"). |
 | **systemd was not found** | Sistem systemd kullanmıyor (Alpine, bazı container ortamları). | Desteklenmiyor. |
 | **Upload corrupted (checksum mismatch)** | Dosya yüklenirken bozuldu. | **Try again**. |
 | **agent did not become healthy** | Servis başlamadı. | Sunucuda: `journalctl -u srvmon-agent -n 50` |
+
+Yaşanmış bir örnek, adım adım (yanlış giden dört şey ve çözümleri): [docs/SENARYO-srvmon-kurulum-ve-guncelleme.md](docs/SENARYO-srvmon-kurulum-ve-guncelleme.md).
 
 ### Kullanırken
 

@@ -115,3 +115,8 @@ userdel -r srvmon; groupdel srvmon 2>/dev/null
 | Uygulama: **srvmon is not root and no agent answered for this user** | Agent kurulmamış ya da `socket_group` ayarı yok | Scripti çalıştır; `sudo -u srvmon /usr/local/bin/srvmon-agent api GET /v1/health` sunucuda `HTTP 200` vermeli. |
 | Uygulama: giriş hatası (`Permission denied (publickey)`) | Key eklenmemiş ya da başka telefonun key'i | O telefonun scriptini çalıştır. Sunucuda `journalctl -u ssh` içinde `Accepted publickey for srvmon` görünmeli. |
 | Dosya yükleme izin hatası veriyor | Agent 0.3.5'ten eski | Agent'ı güncelle (scripti yeni dosyayla tekrar çalıştır). |
+| Uygulama: **connection refused / server closed the connection** | Başarısız denemelerden sonra fail2ban telefonun IP'sini engelledi | Sunucuda `fail2ban-client status sshd`, sonra `fail2ban-client set sshd unbanip <IP>`. Try again'e üst üste basma. |
+| Script sonrası sarı şerit kalıyor | Script yeni dosyayı bulamadı ("keeping the installed agent …") | Önce **Send to server** (ya da scp), sonra scripti tekrar çalıştır. |
+| **Send to server: SFTP failed: permission denied** | `/var/lib/srvmon` `srvmon`'a kapalı (agent < 0.3.7) | `chgrp srvmon /var/lib/srvmon && chmod 750 /var/lib/srvmon`. |
+
+Bütün bunların yaşandığı gerçek bir örnek, adım adım: [SENARYO-srvmon-kurulum-ve-guncelleme.md](SENARYO-srvmon-kurulum-ve-guncelleme.md).

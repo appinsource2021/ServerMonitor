@@ -70,6 +70,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Server 217.160.39.208 (the MCP dev server) has root login gated by TOTP plus a dashboard window.
   - Solved 2026-11-03: the `srvmon` user and agent 0.3.5 with `socket_group "srvmon"` are on 208 (script from the app, run as root in an admin window); the app connects as `srvmon` with the iPhone key ("Romon MCP"). Agent updates there: scp the binary to `/tmp/srvmon-agent`, run the script again.
   - Lesson: login attempts made before the user existed got the phone's IP banned by fail2ban ("Connection refused"); `fail2ban-client set sshd unbanip <ip>` fixed it. Tell the user not to retry repeatedly.
+  - The whole episode (four things that went wrong, fixes, checklist) is written up for Suleyman in `docs/SENARYO-srvmon-kurulum-ve-guncelleme.md`; he wants to solve such things from the docs without Claude. Keep it and `docs/SRVMON-USER.md` current when the flow changes.
   - App side: see "Non-root servers" below.
 - Destructive actions on a real server need Suleyman's explicit OK.
 
