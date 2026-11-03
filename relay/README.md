@@ -25,5 +25,35 @@ location / {
 }
 ```
 
+Caddy (one block, TLS automatic):
+
+```caddy
+monitor.appinsource.eu {
+    reverse_proxy 127.0.0.1:8080 {
+        flush_interval -1
+    }
+}
+```
+
+Traefik (the relay joins the proxy's network; drop the `ports:` line from the compose file):
+
+```yaml
+    networks: [traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.srvmon-relay.rule: Host(`monitor.appinsource.eu`)
+      traefik.http.routers.srvmon-relay.entrypoints: websecure
+      traefik.http.routers.srvmon-relay.tls.certresolver: letsencrypt
+      traefik.http.services.srvmon-relay.loadbalancer.server.port: "8080"
+```
+
+No proxy on the machine yet? Install Caddy (`apt install caddy`), put the block above into
+`/etc/caddy/Caddyfile` and `systemctl reload caddy`; it gets the certificate itself.
+
+Whatever the proxy, keep the read timeout at 60 s or more (agents long-poll for 25 s) and
+response buffering off.
+
+Check: `curl -s https://monitor.appinsource.eu/healthz` must answer `{"ok":true}`.
+
 Data (servers, members, invites) lives in the `relay-data` volume as `relay.json`; secrets and
 tokens are stored only as SHA-256 hashes.
