@@ -103,10 +103,13 @@ enum MonitoringSetupScript {
 /// Shown from Add server when the User is not root: everything the server's admin needs,
 /// generated on the phone with this iPhone's key already in place.
 struct MonitoringSetupView: View {
+    enum Mode { case setup, update }
+
     @Environment(\.dismiss) private var dismiss
     let username: String
     let host: String
     let serverName: String
+    var mode: Mode = .setup
 
     @State private var arch = "amd64"
     @State private var copied: String?
@@ -124,7 +127,9 @@ struct MonitoringSetupView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("The server's admin does this once, as root. Afterwards this iPhone logs in as \(user), which can only talk to the agent. Root login stays as it is.")
+                    Text(mode == .update
+                         ? "The app is not root on this server and its agent cannot replace itself yet. Do this once, as root: copy the new agent over and run the script. From agent 0.3.6 on, Update now does it from here."
+                         : "The server's admin does this once, as root. Afterwards this iPhone logs in as \(user), which can only talk to the agent. Root login stays as it is.")
                         .font(.system(size: 13)).foregroundStyle(Theme.text2)
 
                     step(1, "Send the agent to the server") {
@@ -144,8 +149,10 @@ struct MonitoringSetupView: View {
                         Text("sha256 \(sha)").font(Theme.mono(10)).foregroundStyle(Theme.text3).lineLimit(1).truncationMode(.middle)
                     }
 
-                    step(2, "Run the setup script as root") {
-                        Text("Creates the \(user) user (key-only login, no sudo), adds this iPhone's key and installs agent \(BundledAgent.version) with socket_group. Running it again later updates the agent.")
+                    step(2, mode == .update ? "Run the script as root" : "Run the setup script as root") {
+                        Text(mode == .update
+                             ? "The same setup script: it keeps the \(user) user, the keys and the config, verifies the new file's sha256, swaps the agent in (old one kept as .prev) and restarts it. Ends with OK."
+                             : "Creates the \(user) user (key-only login, no sudo), adds this iPhone's key and installs agent \(BundledAgent.version) with socket_group. Running it again later updates the agent.")
                             .font(.system(size: 13)).foregroundStyle(Theme.text2)
                         HStack(spacing: 8) {
                             copyButton("Copy script", script)
@@ -163,8 +170,10 @@ struct MonitoringSetupView: View {
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.border))
                     }
 
-                    step(3, "Connect") {
-                        Text("When the script ends with OK, come back and tap Connect to existing agent.")
+                    step(3, mode == .update ? "Check" : "Connect") {
+                        Text(mode == .update
+                             ? "Open the server in the app: the yellow strip disappears within a few seconds once \(BundledAgent.version) answers."
+                             : "When the script ends with OK, come back and tap Connect to existing agent.")
                             .font(.system(size: 13)).foregroundStyle(Theme.text2)
                     }
 
@@ -174,7 +183,7 @@ struct MonitoringSetupView: View {
                 .padding(.horizontal, 20).padding(.vertical, 12)
             }
             .background(Theme.bg)
-            .navigationTitle("Prepare \(user) on the server")
+            .navigationTitle(mode == .update ? "Update agent on the server" : "Prepare \(user) on the server")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }

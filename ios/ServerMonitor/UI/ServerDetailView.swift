@@ -189,6 +189,7 @@ struct ServerActionsMenu: View, Equatable {
     @State private var updating: Installer?
     @State private var message: String?
     @State private var actionsOn: Bool?
+    @State private var showManualUpdate = false
 
     static func == (a: Self, b: Self) -> Bool { a.server == b.server }
 
@@ -220,6 +221,9 @@ struct ServerActionsMenu: View, Equatable {
                     Task { await inst.run() }
                 } label: { Label("Update agent", systemImage: "arrow.down.circle") }
             }
+            if server.externalAgent == true {
+                Button { showManualUpdate = true } label: { Label("Update on the server…", systemImage: "doc.text") }
+            }
             Divider()
             Button(role: .destructive) { showRemove = true } label: { Label("Remove server", systemImage: "trash") }
         } label: {
@@ -238,6 +242,9 @@ struct ServerActionsMenu: View, Equatable {
         }
         .sheet(item: $updating) { inst in
             NavigationStack { InstallProgressView(installer: inst, title: "Updating \(server.name)") }
+        }
+        .sheet(isPresented: $showManualUpdate) {
+            MonitoringSetupView(username: server.username, host: server.host, serverName: server.name, mode: .update)
         }
         .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("OK") { message = nil }

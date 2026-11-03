@@ -206,6 +206,7 @@ struct AgentUpdateChip: View {
     let server: ServerRecord
     let current: String
     @State private var updating: Installer?
+    @State private var showManual = false
 
     var body: some View {
         if server.canUpdateFromApp {
@@ -223,8 +224,13 @@ struct AgentUpdateChip: View {
             }
         } else {
             // Non-root login to an agent older than 0.3.6: it cannot replace itself yet.
-            strip(action: nil)
-                .accessibilityLabel("Agent update needed, server runs \(current). Update it on the server once")
+            // The strip hands out the new binary and the script instead.
+            Button { showManual = true } label: { strip(action: "Get files") }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Agent update needed, server runs \(current). Get the files to update it on the server")
+                .sheet(isPresented: $showManual) {
+                    MonitoringSetupView(username: server.username, host: server.host, serverName: server.name, mode: .update)
+                }
         }
     }
 
@@ -233,8 +239,8 @@ struct AgentUpdateChip: View {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warn).font(.system(size: 15))
             VStack(alignment: .leading, spacing: 2) {
                 Text("Agent update needed").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.warn)
-                Text(action == nil
-                     ? "Server runs \(current) · app has \(BundledAgent.version) · update it on the server once; from 0.3.6 it updates from here"
+                Text(action == "Get files"
+                     ? "Server runs \(current) · app has \(BundledAgent.version) · once by hand on the server, then from here"
                      : "Server runs \(current) · app has \(BundledAgent.version)")
                     .font(.system(size: 11)).foregroundStyle(Theme.text2)
             }
