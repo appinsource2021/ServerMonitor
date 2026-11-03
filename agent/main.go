@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-var version = "0.3.6"
+var version = "0.3.7"
 
 const defaultConfigPath = "/etc/srvmon/config.json"
 

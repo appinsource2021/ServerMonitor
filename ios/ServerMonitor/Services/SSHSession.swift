@@ -300,6 +300,16 @@ func shq(_ s: String) -> String {
 
 /// Turns low-level network/SSH errors into something a person can act on.
 func friendlyError(_ error: Error) -> String {
+    if let st = error as? SFTPMessage.Status {
+        // The server's SFTP answer, with its reason; "error 1" alone says nothing.
+        let why: String
+        switch st.errorCode {
+        case .permissionDenied: why = "permission denied. The login user cannot write there (for a non-root user the agent's upload folder must be group-writable, agent ≥ 0.3.7 makes it so)."
+        case .noSuchFile: why = "no such file or folder on the server."
+        default: why = "\(st.errorCode)."
+        }
+        return "SFTP failed: " + why + (st.message.isEmpty ? "" : " (\(st.message))")
+    }
     if error is SSHError || error is SSHTimeout || error is InstallError || error is AgentAPI.HTTPError || error is AgentAPI.AgentMissing || error is RelayError {
         return error.localizedDescription
     }

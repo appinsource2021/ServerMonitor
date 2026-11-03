@@ -728,6 +728,16 @@ func fsPrepareUploadDir(group string) error {
 		return fmt.Errorf("socket_group %q: %w", group, err)
 	}
 	gid, _ := strconv.Atoi(g.Gid)
+	// The parent (/var/lib/srvmon) must be enterable by the group too, or SFTP as the
+	// monitoring user fails before it reaches the upload folder.
+	if parent := filepath.Dir(fsUploadDir); parent != "/" {
+		if err := os.Chown(parent, 0, gid); err != nil {
+			return err
+		}
+		if err := os.Chmod(parent, 0o750); err != nil {
+			return err
+		}
+	}
 	if err := os.Chown(fsUploadDir, 0, gid); err != nil {
 		return err
 	}

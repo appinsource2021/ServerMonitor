@@ -51,7 +51,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Entitlements stay **empty**. A personal Apple team cannot use Push Notifications, so APNs stays unused until there is a paid team.
 
 ## Versions
-- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.3.6** now.
+- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.3.7** now.
 - After agent changes:
   1. Bump both places.
   2. Run `make ios-resources`.
@@ -98,7 +98,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Hidden for such servers: ··· → Update agent, "Remove and uninstall agent", and the button on the yellow update strip (the strip only says to update on the server).
 - `AddServerView`: a non-root User shows a banner, hides the "Container actions" toggle (the config is the admin's) and the button reads "Connect to existing agent". Its "Server setup script" button opens `MonitoringSetupView` (`UI/MonitoringSetupView.swift`): arch picker, `ShareLink` of the bundled binary plus the scp command, and the script from `MonitoringSetupScript.make` with the iPhone key, user, server name and the binary's sha filled in (copy or share as `srvmon-setup.sh`). The script is the one in `docs/BRIEFING-monitoring-user.md` §6, parameterised; keep the two in step.
 - `BundledAgent.binaryURL(arch:)` and `sha256(arch:)` read the bundle for that sheet.
-- Agent 0.3.5: `fsPrepareUploadDir` makes `/var/lib/srvmon/upload` `root:<socket_group> 0770` so the SSH user can write uploads over SFTP; `fsImport` gives a new file the owner of its folder (an upload by `srvmon` no longer lands as `srvmon`).
+- Agent 0.3.5: `fsPrepareUploadDir` makes `/var/lib/srvmon/upload` `root:<socket_group> 0770` so the SSH user can write uploads over SFTP (0.3.7 also makes the parent `/var/lib/srvmon` `root:<group> 0750`, without which SFTP never reached the folder); `fsImport` gives a new file the owner of its folder (an upload by `srvmon` no longer lands as `srvmon`).
 - Everything else (health check, disk, file manager, terminal, relay enrol) goes through the agent API or the user's own shell and works unchanged. The agent runs as root, so the non-root key holder has the full API, file edits included.
 
 ## Second iPhone (phone-to-phone authorization)
