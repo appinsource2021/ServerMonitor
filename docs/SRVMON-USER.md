@@ -68,8 +68,8 @@ Uygulama yeni bir agent taşıdığında sunucu kartında sarı **Agent update n
 
 **Agent 0.3.5 ve öncesi, ya da otomatik olmazsa: elle.** Kurulumla aynı adımlar:
 
-1. Uygulamada sunucu kartındaki sarı şeritte **Get files**'a (ya da sunucuda ··· → **Update on the server…**) dokun. **Share binary** ile yeni dosyayı al, **Copy script** ile scripti al (içinde yeni sürümün sha256'sı var).
-2. Sunucuya kopyala: `scp srvmon-agent-linux-amd64 root@SUNUCU:/tmp/srvmon-agent`. Sonra scripti root olarak çalıştır. Script dosyayı doğrular, yerine koyar, servisi yeniden başlatır, `OK` yazar. Kullanıcı, key ve ayar dosyası olduğu gibi kalır.
+1. Uygulamada sunucu kartındaki sarı şeritte **Get files**'a (ya da sunucuda ··· → **Update on the server…**) dokun. **Send to server**'a bas: uygulama yeni dosyayı sunucuya kendisi koyar (`/home/srvmon/srvmon-agent`). **Copy script** ile scripti al (içinde yeni sürümün sha256'sı var).
+2. Scripti sunucuda root olarak çalıştır. (Send to server olmazsa: **Share binary** ile dosyayı al, `scp srvmon-agent-linux-amd64 root@SUNUCU:/tmp/srvmon-agent` ile kopyala; script iki yere de bakar.) Script dosyayı doğrular, yerine koyar, servisi yeniden başlatır, `OK` yazar. Kullanıcı, key ve ayar dosyası olduğu gibi kalır.
 3. Uygulamada sunucuyu aç; şerit birkaç saniye içinde kaybolur.
 
 Scriptin agent kısmı, elle yapmak istersen:

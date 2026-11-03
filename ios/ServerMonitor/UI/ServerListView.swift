@@ -229,7 +229,7 @@ struct AgentUpdateChip: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Agent update needed, server runs \(current). Get the files to update it on the server")
                 .sheet(isPresented: $showManual) {
-                    MonitoringSetupView(username: server.username, host: server.host, serverName: server.name, mode: .update)
+                    MonitoringSetupView(username: server.username, host: server.host, serverName: server.name, mode: .update, server: server)
                 }
         }
     }

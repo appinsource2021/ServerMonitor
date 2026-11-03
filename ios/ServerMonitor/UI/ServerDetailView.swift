@@ -244,7 +244,7 @@ struct ServerActionsMenu: View, Equatable {
             NavigationStack { InstallProgressView(installer: inst, title: "Updating \(server.name)") }
         }
         .sheet(isPresented: $showManualUpdate) {
-            MonitoringSetupView(username: server.username, host: server.host, serverName: server.name, mode: .update)
+            MonitoringSetupView(username: server.username, host: server.host, serverName: server.name, mode: .update, server: server)
         }
         .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("OK") { message = nil }

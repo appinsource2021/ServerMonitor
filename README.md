@@ -379,12 +379,8 @@ Uygulama her yeni sürümünde içinde yeni bir agent taşır. Sunucudaki agent 
 
 **`srvmon` ile bağlı sunucular, elle.** 0.3.5 ve öncesinden ilk geçişte (o sürümler kendini güncelleyemez; şeritte **Update now** yerine **Get files** çıkar) ya da otomatik güncelleme bir sebeple olmazsa. Kurulumla aynı üç adım:
 
-1. **Yeni dosyayı al.** Şeritteki **Get files**'a ya da ··· → **Update on the server…**'a dokun. Açılan ekranda **Share binary** yeni agent dosyasını Mac'e gönderir (AirDrop), `scp` komutu ve script de oradadır. Geliştirici Mac'inde dosya ayrıca hazır: `ios/ServerMonitor/Resources/Agent/srvmon-agent-linux-amd64` (doğru sha256 yanındaki `SHA256SUMS` dosyasında).
-2. **Sunucuya kopyala ve scripti çalıştır.** Yönetim penceresi açıkken:
-   ```bash
-   scp srvmon-agent-linux-amd64 root@SUNUCU:/tmp/srvmon-agent
-   ```
-   Sonra aynı ekrandan **Copy script** ile aldığın scripti sunucuda root olarak çalıştır. Script o sürümün sha256'sını taşır: dosyayı doğrular, `/usr/local/bin/srvmon-agent` olarak kurar, servisi yeniden başlatır ve `OK` yazar. Kullanıcıya, key'e ve `/etc/srvmon/config.json` dosyasına dokunmaz. Scriptin yaptığının kısa hali, elle yapmak istersen:
+1. **Yeni dosyayı sunucuya koy.** Şeritteki **Get files**'a ya da ··· → **Update on the server…**'a dokun ve **Send to server**'a bas: uygulama dosyayı `srvmon` olarak SFTP ile sunucuya gönderir, agent onu `/home/srvmon/srvmon-agent` olarak yerine koyar. Mac gerekmez. (Elle yol da duruyor: **Share binary** ile dosyayı Mac'e al ve `scp srvmon-agent-linux-amd64 root@SUNUCU:/tmp/srvmon-agent`.)
+2. **Scripti root olarak çalıştır.** Aynı ekrandan **Copy script** ile aldığın scripti sunucuda root olarak yapıştır (MCP app'in root terminali, yönetim penceresi ya da başka bir root yolu). Script o sürümün sha256'sını taşır: dosyayı doğrular, `/usr/local/bin/srvmon-agent` olarak kurar, servisi yeniden başlatır ve `OK` yazar. Kullanıcıya, key'e ve `/etc/srvmon/config.json` dosyasına dokunmaz. Scriptin yaptığının kısa hali, elle yapmak istersen:
    ```bash
    echo "SHA256  /tmp/srvmon-agent" | sha256sum -c -                    # SHA256: SHA256SUMS dosyasındaki değer
    install -m 755 /tmp/srvmon-agent /usr/local/bin/srvmon-agent.new

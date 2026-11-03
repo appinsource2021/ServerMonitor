@@ -43,15 +43,18 @@ enum MonitoringSetupScript {
         sshd -t && (systemctl reload ssh 2>/dev/null || systemctl reload sshd)
 
         echo "== 3. agent"
-        if [ -f /tmp/srvmon-agent ]; then
-          echo "$SHA  /tmp/srvmon-agent" | sha256sum -c -
-          install -m 755 /tmp/srvmon-agent /usr/local/bin/srvmon-agent.new
+        SRC=''
+        for f in /tmp/srvmon-agent "$H/srvmon-agent"; do [ -f "$f" ] && SRC="$f" && break; done
+        if [ -n "$SRC" ]; then
+          echo "$SHA  $SRC" | sha256sum -c -
+          [ -x /usr/local/bin/srvmon-agent ] && cp -p /usr/local/bin/srvmon-agent /usr/local/bin/srvmon-agent.prev || true
+          install -m 755 "$SRC" /usr/local/bin/srvmon-agent.new
           mv -f /usr/local/bin/srvmon-agent.new /usr/local/bin/srvmon-agent
-          rm -f /tmp/srvmon-agent
+          rm -f "$SRC"
         elif [ -x /usr/local/bin/srvmon-agent ]; then
-          echo "no /tmp/srvmon-agent; keeping the installed agent $(/usr/local/bin/srvmon-agent version)"
+          echo "no new file in /tmp/srvmon-agent or $H/srvmon-agent; keeping the installed agent $(/usr/local/bin/srvmon-agent version)"
         else
-          echo "ERROR: /tmp/srvmon-agent missing. Copy the agent binary there first." >&2; exit 1
+          echo "ERROR: no agent file. Use 'Send to server' in the app, or copy it to /tmp/srvmon-agent." >&2; exit 1
         fi
         install -d -m 700 /etc/srvmon
         if [ ! -f /etc/srvmon/config.json ]; then
@@ -106,13 +109,20 @@ struct MonitoringSetupView: View {
     enum Mode { case setup, update }
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(ServerStore.self) private var store
     let username: String
     let host: String
     let serverName: String
     var mode: Mode = .setup
+    /// A connected server: the sheet can then send the file over itself (SFTP as the login user).
+    var server: ServerRecord? = nil
 
     @State private var arch = "amd64"
     @State private var copied: String?
+    @State private var sending = false
+    @State private var sendProgress = 0.0
+    @State private var sentTo: String?
+    @State private var sendError: String?
 
     private var user: String { username.trimmingCharacters(in: .whitespaces) }
     private var sha: String { BundledAgent.sha256(arch: arch) ?? "" }
@@ -133,8 +143,33 @@ struct MonitoringSetupView: View {
                         .font(.system(size: 13)).foregroundStyle(Theme.text2)
 
                     step(1, "Send the agent to the server") {
-                        Text("Share the agent binary (AirDrop to a Mac, or save it to Files), then copy it to the server as /tmp/srvmon-agent:")
-                            .font(.system(size: 13)).foregroundStyle(Theme.text2)
+                        if let server, mode == .update {
+                            Text("The app can put the file there itself, as \(user), through the agent's upload folder. The script then picks it up from /home/\(user)/srvmon-agent.")
+                                .font(.system(size: 13)).foregroundStyle(Theme.text2)
+                            if let arch = server.arch { Text("Architecture: \(arch)").font(.system(size: 12)).foregroundStyle(Theme.text3) }
+                            Button {
+                                Task { await send(server) }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    if sending { ProgressView().controlSize(.small).tint(Theme.bg) }
+                                    Text(sending ? "Sending… \(Int(sendProgress * 100))%" : sentTo == nil ? "Send to server" : "Send again")
+                                }
+                            }
+                            .buttonStyle(PrimaryButtonStyle())
+                            .disabled(sending)
+                            if let sentTo {
+                                Label("On the server: \(sentTo)", systemImage: "checkmark.circle.fill")
+                                    .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.ok)
+                            }
+                            if let sendError {
+                                Text(sendError).font(.system(size: 12)).foregroundStyle(Theme.crit)
+                            }
+                            Text("Or by hand: share the file and copy it to the server as /tmp/srvmon-agent.")
+                                .font(.system(size: 12)).foregroundStyle(Theme.text3)
+                        } else {
+                            Text("Share the agent binary (AirDrop to a Mac, or save it to Files), then copy it to the server as /tmp/srvmon-agent:")
+                                .font(.system(size: 13)).foregroundStyle(Theme.text2)
+                        }
                         Segmented(options: [("amd64", "Intel / AMD (amd64)"), ("arm64", "ARM (arm64)")], selection: $arch)
                         code(scpCommand)
                         HStack(spacing: 8) {
@@ -186,8 +221,34 @@ struct MonitoringSetupView: View {
             .navigationTitle(mode == .update ? "Update agent on the server" : "Prepare \(user) on the server")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .onAppear { if let a = server?.arch, a == "amd64" || a == "arm64" { arch = a } }
         }
         .presentationBackground(Theme.bg)
+    }
+
+    /// Uploads the bundled binary into the agent's upload slot over SFTP and has the agent
+    /// move it to /home/<user>/srvmon-agent (agent ≥ 0.3.3 for the slot, 0.3.5 for a non-root writer).
+    private func send(_ server: ServerRecord) async {
+        sending = true
+        sendError = nil
+        sendProgress = 0
+        defer { sending = false }
+        do {
+            guard let url = BundledAgent.binaryURL(arch: arch) else { throw InstallError("No bundled agent for \(arch).") }
+            let data = try Data(contentsOf: url)
+            let api = store.api(for: server)
+            struct Slot: Decodable { let temp: String }
+            let slot = try JSON.decoder.decode(Slot.self, from: try await api.post("/v1/fs/upload"))
+            try await store.session(for: server).upload(data, to: slot.temp) { p in
+                Task { @MainActor in sendProgress = p }
+            }
+            struct Imp: Encodable { let temp: String; let path: String; let overwrite: Bool }
+            let dest = "/home/\(user)/srvmon-agent"
+            try await api.send("POST", "/v1/fs/import", Imp(temp: slot.temp, path: dest, overwrite: true))
+            sentTo = dest
+        } catch {
+            sendError = friendlyError(error)
+        }
     }
 
     private func step<C: View>(_ n: Int, _ title: String, @ViewBuilder _ content: () -> C) -> some View {

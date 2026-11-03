@@ -255,15 +255,18 @@ EOF
 sshd -t && systemctl reload ssh
 
 echo "== 3. agent"
-if [ -f /tmp/srvmon-agent ]; then
-  echo "$SHA  /tmp/srvmon-agent" | sha256sum -c -
-  install -m 755 /tmp/srvmon-agent /usr/local/bin/srvmon-agent.new
+SRC=''
+for f in /tmp/srvmon-agent /home/srvmon/srvmon-agent; do [ -f "$f" ] && SRC="$f" && break; done
+if [ -n "$SRC" ]; then
+  echo "$SHA  $SRC" | sha256sum -c -
+  [ -x /usr/local/bin/srvmon-agent ] && cp -p /usr/local/bin/srvmon-agent /usr/local/bin/srvmon-agent.prev || true
+  install -m 755 "$SRC" /usr/local/bin/srvmon-agent.new
   mv -f /usr/local/bin/srvmon-agent.new /usr/local/bin/srvmon-agent
-  rm -f /tmp/srvmon-agent
+  rm -f "$SRC"
 elif [ -x /usr/local/bin/srvmon-agent ]; then
-  echo "no /tmp/srvmon-agent; keeping the installed agent $(/usr/local/bin/srvmon-agent version)"
+  echo "no new file in /tmp/srvmon-agent or /home/srvmon/srvmon-agent; keeping the installed agent $(/usr/local/bin/srvmon-agent version)"
 else
-  echo "ERROR: /tmp/srvmon-agent missing. Copy the agent binary there first." >&2; exit 1
+  echo "ERROR: no agent file. Use 'Send to server' in the app, or copy it to /tmp/srvmon-agent." >&2; exit 1
 fi
 install -d -m 700 /etc/srvmon
 if [ ! -f /etc/srvmon/config.json ]; then
