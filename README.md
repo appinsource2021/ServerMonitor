@@ -176,7 +176,7 @@ sed -i '/server-monitor-ios/d' ~/.ssh/authorized_keys
 
 ## 7. Uygulamayı kullanmak
 
-- **Servers:** Sorunlu sunucular en üstte listelenir. Kartlarda CPU, RAM, disk ve çalışan container sayısı görünür. Bağlantı koparsa kartta **Reconnect** butonu çıkar. Sunucudaki agent uygulamadakinden eskiyse kartta sarı **Agent update needed** şeridi ve **Update now** düğmesi çıkar; dokununca güncelleme başlar.
+- **Servers:** Sorunlu sunucular en üstte listelenir. Kartlarda CPU, RAM, disk ve çalışan container sayısı görünür. Bağlantı koparsa kartta **Reconnect** butonu çıkar. Sunucudaki agent uygulamadakinden eskiyse kartta sarı **Agent update needed** şeridi ve **Update now** düğmesi çıkar; dokununca güncelleme başlar. İlerleme sayfasında **Continue in background** dersen şerit maviye döner ve o anki adımı ("Upload agent", "Health check"…) ilerleme çubuğuyla gösterir; dokununca sayfa geri açılır. Bitince şerit kendiliğinden kalkar; hata olursa kırmızı **Agent update failed** şeridi kalır, dokunup ayrıntıyı görünce kapanır.
 - **Sunucu detayı:**
   - CPU, RAM ve disk göstergeleri, son 1 saatlik CPU grafiği.
   - **Docker kartı:** Docker'ın kendi sağlık durumu (motor cevap veriyor mu, `docker.service` çalışıyor mu, sorunlu container var mı), motor sürümü, çalışan / durmuş / sorunlu container ve imaj sayıları, container'ların sunucuya bindirdiği toplam CPU ve RAM yükü, son 1 saatte container CPU'sunun sunucu CPU'suna göre seyri. Karta dokununca **Containers** ekranı açılır: en üstte Docker motorunun durumu (dokununca motorun logları), altında filtre kutusu ve container listesi.

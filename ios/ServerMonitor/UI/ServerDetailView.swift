@@ -234,9 +234,7 @@ struct ServerActionsMenu: View, Equatable {
             } label: { Label("Container & service actions…", systemImage: "switch.2") }
             if server.canUpdateFromApp {
                 Button {
-                    let inst = Installer(input: NewServerInput(host: server.host, username: server.username), store: store, existing: server)
-                    updating = inst
-                    Task { await inst.run() }
+                    updating = store.startUpdate(server)
                 } label: { Label("Update agent", systemImage: "arrow.down.circle") }
             }
             if server.externalAgent == true {

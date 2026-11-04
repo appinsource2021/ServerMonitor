@@ -32,6 +32,26 @@ final class ServerStore {
     var pendingJoin: TeamJoin.Link?
     /// Another iPhone's key (srvmon://authorize) waiting to be put on servers.
     var pendingAuthorize: PhoneLink.Authorize?
+    /// Agent updates in flight, by server id. The server card shows their progress while the
+    /// sheet is closed ("Continue in background"); a finished update leaves the map by itself.
+    var updates: [UUID: Installer] = [:]
+
+    /// Starts an agent update (or returns the one already running) so that every entry point
+    /// — the card strip, the ··· menu — shares one progress and the card can show it.
+    @MainActor
+    func startUpdate(_ server: ServerRecord) -> Installer {
+        if let running = updates[server.id], !running.finished { return running }
+        let inst = Installer(input: NewServerInput(host: server.host, username: server.username), store: self, existing: server)
+        updates[server.id] = inst
+        Task {
+            await inst.run()
+            if inst.failedMessage == nil {
+                try? await Task.sleep(for: .seconds(3))
+                if updates[server.id] === inst { updates[server.id] = nil }
+            }
+        }
+        return inst
+    }
     /// Servers another iPhone sent (srvmon://import) waiting to be added.
     var pendingImport: PhoneLink.Import?
     /// iPhones whose keys this phone put on servers (see PhoneLinks.swift).

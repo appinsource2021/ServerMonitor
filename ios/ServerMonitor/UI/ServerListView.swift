@@ -216,17 +216,28 @@ struct AgentUpdateChip: View {
     @State private var showManual = false
 
     var body: some View {
-        if server.canUpdateFromApp {
+        if let running = store.updates[server.id] {
+            // An update is in flight (or just failed) and its sheet is closed: show it on the card.
+            Button { updating = running } label: { progressStrip(running) }
+                .buttonStyle(.plain)
+                .accessibilityLabel(running.failedMessage == nil ? "Updating the agent, tap for details" : "Agent update failed, tap for details")
+                .sheet(item: $updating, onDismiss: {
+                    // a failure stays on the card until its sheet has been opened and closed
+                    if running.finished, running.failedMessage != nil { store.updates[server.id] = nil }
+                }) { inst in
+                    NavigationStack { InstallProgressView(installer: inst, title: "Updating \(server.name)") }
+                }
+        } else if server.canUpdateFromApp {
             Button {
-                let inst = Installer(input: NewServerInput(host: server.host, username: server.username), store: store, existing: server)
-                updating = inst
-                Task { await inst.run() }
+                updating = store.startUpdate(server)
             } label: {
                 strip(action: "Update now")
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Agent update needed, server runs \(current). Update now")
-            .sheet(item: $updating) { inst in
+            .sheet(item: $updating, onDismiss: {
+                if let r = store.updates[server.id], r.finished, r.failedMessage != nil { store.updates[server.id] = nil }
+            }) { inst in
                 NavigationStack { InstallProgressView(installer: inst, title: "Updating \(server.name)") }
             }
         } else {
@@ -239,6 +250,34 @@ struct AgentUpdateChip: View {
                     MonitoringSetupView(username: server.username, host: server.host, serverName: server.name, mode: .update, server: server)
                 }
         }
+    }
+
+    private func progressStrip(_ inst: Installer) -> some View {
+        let failed = inst.failedMessage != nil
+        let color = failed ? Theme.crit : Theme.accent
+        let step = inst.steps.first { $0.state == .running } ?? inst.steps.last { $0.state == .done }
+        return HStack(spacing: 10) {
+            if failed {
+                Image(systemName: "xmark.octagon.fill").foregroundStyle(color).font(.system(size: 15))
+            } else {
+                ProgressView().controlSize(.small).tint(color)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(failed ? "Agent update failed" : "Updating agent to \(BundledAgent.version)…")
+                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(color)
+                Text(failed ? (inst.failedMessage ?? "") : (step?.title ?? "Starting") + " · tap for details")
+                    .font(.system(size: 11)).foregroundStyle(Theme.text2).lineLimit(1)
+                if !failed {
+                    ProgressView(value: inst.progress).tint(color)
+                }
+            }
+            Spacer(minLength: 6)
+            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.text3)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(color.opacity(0.35)))
     }
 
     private func strip(action: String?) -> some View {
