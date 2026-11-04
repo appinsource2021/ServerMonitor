@@ -22,49 +22,45 @@ Bu yüzden ürünün sözü şu: **terminale düşmeden sorunu gör ve çöz.** 
 | 2026-11-04 | Mac için ayrı bir **Server Monitor for Mac** programı yapılacak. Port açmadan dışarı bağlanacak, eşleştirme anahtarıyla telefona bağlanacak. |
 | 2026-11-04 | Relay şimdilik **MCP sunucusunda** çalışacak, ama **taşınabilir** olmak zorunda. |
 | 2026-11-04 | Relay'in hangi sunucuda çalışacağı ileride bir **yönetim aracından** seçilecek. |
+| 2026-11-04 | **Merkezi relay yok.** Her kullanıcı kendi relay'ini kendi makinesine kurar. Kontrol uygulamadadır, ürünün bağlı olduğu bir kaynak yoktur. |
+| 2026-11-04 | Kurulum **soru-cevaplı bir asistanla** yapılır. Nasıl yapıldığı resmi sayfada anlatılır. |
 
-## 3. Relay: şu anki plan
+## 3. Relay modeli
 
 **Ne:** Ekip üyelerinin ve Mac programının kullanacağı posta kutusu. Sunucular ona dışarıdan bağlanır, port açılmaz.
 
-**Nerede:** MCP sunucusundaki kişisel workspace'te, bir proje olarak. Sunucunun kuralı, projelerin sunucunun kendisine kurulmamasını, workspace'ten yayınlanmasını söylüyor. Bu yüzden `docker compose` ile doğrudan sunucuya kurmuyoruz.
-
-**Kurulum adımları:** Bölüm 4.
+**Ürün modeli:** Relay'i kullanıcı kendisi kurar. Bunun sonuçları:
+- appinsource müşteri verisi taşımaz, sitedeki "arka ucumuz yok" sözü doğru kalır.
+- Sunucu maliyeti ve bakım sorumluluğu kullanıcıdadır.
+- Relay kapanırsa sadece o kullanıcının ekibi etkilenir.
+- Bedeli: kullanıcının bir makinesi ve alan adı olmalı. Mac programı için de relay şarttır. Sunucusu olmayan bir Mac kullanıcısı için ileride **barındırılan relay** seçeneği düşünülebilir. Bu, Pro'ya ek bir hizmet olur ve ayrı karar ister.
 
 **Taşınabilirlik:**
-- Relay tek bir programdır. Bütün durumu `relay.json` dosyasındadır, şifresi `admin-token` ya da `.env` içindedir.
+- Relay tek bir programdır. Bütün durumu `relay.json` dosyasındadır, şifresi `admin-token` ya da env dosyasındadır.
 - Taşıma testi yapıldı: veri klasörü kopyalanıp program başka yerde başlatıldığında durum birebir aynı kaldı (2026-11-04, yerel test).
 - Docker'lı sunucularda `relay/backup.sh` ve `relay/restore.sh` kullanılır. Bu iki script henüz gerçek Docker'da denenmedi.
 - Adres aynı kalırsa taşıma sunuculara ve telefonlara görünmez.
-- **Adres değişirse** her sunucuda relay ayarı yeniden yazılır ve üyelerin yeniden davet alması gerekir. Bu yüzden adres seçimi önemlidir.
+- **Adres değişirse** her sunucuda relay ayarı yeniden yazılır ve üyelerin yeniden davet alması gerekir.
 
-**Bilinen riskler, ilk kurulumda denenecek:**
-- Yayın adresi `romon-mcp.com` altında olur, `appinsource.eu` altında olmaz. Ürün çıkınca kendi adresimize geçmek bir taşıma demektir.
-- Yayın **public** olmalı. Giriş ekranı olan bir yayına uygulama ve agent bağlanamaz.
-- Yayın proxy'sinin 25 saniyelik bekleyen istekleri kesip kesmediği bilinmiyor.
-- Konteyner yeniden başlarsa relay'in kendiliğinden açılıp açılmadığı bilinmiyor.
-- Proje şirket projesi olarak açılır. Kişisel proje için ayrı izin gerekir.
-- Workspace şirket sunucusu ve şirket hesabıdır. Müşteri trafiği için bu yer geçicidir.
+## 4. Kurulum asistanı ve Süleyman'ın relay'i
 
-## 4. Relay'i workspace'te başlatmak
+**Asistan bugün:** `relay/setup.sh`. Terminalde sırayla sorar: alan adı, port, web proxy, onay. Sonra kurar, test eder, adresi ve şifreyi yazar. Yalnızca prova modunda denendi, gerçek bir sunucuda henüz çalıştırılmadı. Dağıtım paketi `relay/make-release.sh` ile `official/downloads/` altına üretilir. Anlatım `official/relay.html` sayfasındadır.
 
-1. Mac'te paketi üret:
-   ```sh
-   relay/make-workspace-zip.sh
-   ```
-   Çıktı `~/Downloads/srvmon-relay-workspace.zip` olur.
-2. Dashboard'da **Projects → New project → Upload existing project** ile yükle. Veritabanı gerekmez.
-3. Test sunucusunu başlat. Komut paketteki CLAUDE.md dosyasında yazılıdır.
-4. Yayını **public** yap, kısa adres olarak `monitor.romon-mcp.com` iste.
-5. Kontrol et:
-   ```sh
-   curl -s https://monitor.romon-mcp.com/healthz
-   ```
-   Cevap `{"ok":true}` olmalı.
-6. Şifreyi al: projede `data/admin-token` dosyası. Uygulamada **Team → Set up relay** ekranına adresi ve şifreyi gir.
-7. Sunucuları relay'e kaydet, bir üyeyi davet et ve bir dakika bekleyip bağlantının kopmadığına bak.
+**Asistan için taslak plan:**
+1. Terminal asistanını gerçek bir sunucuda denemek.
+2. Aynı soruları uygulamanın içine taşımak: **Team → Set up relay → Install on one of my servers**. Uygulama SSH ile girer, soruları ekranda sorar, şifreyi kendisi kaydeder. Kullanıcı terminal görmez.
+3. Sunucuya agent kurulumunu da aynı soru-cevap diliyle göstermek.
+4. Yönetim aracı geldiğinde aynı adımları oradan da sunmak.
 
-`data/` klasörü git'e girmez. İçinde şifre ve üye bilgisi var.
+**Süleyman'ın kendi relay'i:** MCP workspace'inde **#ST6000 Server Monitor Relay** projesi. Sunucunun kuralı projelerin sunucunun kendisine kurulmasını yasaklıyor, bu yüzden workspace'te düz süreç olarak çalışıyor.
+- Durum (2026-11-04): çalışıyor, ama yayın sadece Süleyman'a açık. Gerçek kullanım için public olmalı.
+- Adres: `server-monitor-relay-stopaloglu.dev.romon-mcp.com`. Kısa adres olarak `monitor.romon-mcp.com` düşünülüyor.
+- Şifre projedeki `data/admin-token` dosyasında. `data/` git'e girmez, çünkü proje şirket reposuna gidiyor.
+
+**Public açılınca denenecekler:**
+- Yayın proxy'si 25 saniyelik bekleyen istekleri kesiyor mu?
+- Konteyner yeniden başlayınca relay kendiliğinden açılıyor mu?
+- Burası şirket hesabı ve şirket sunucusu. Bu yüzden geçicidir, kendi makinemize taşınacak.
 
 ## 5. Yönetim aracı (management tool)
 
@@ -106,7 +102,9 @@ Sıra: izleme ve QR eşleştirme → uçtan uca şifreleme → terminal ve dosya
 | Güncellemenin kartta görünmesi | Bitti. |
 | Süreç listesi | Bitti (agent 0.4.1). Gerçek sunucuda denenmeli. |
 | Web sitesi | `official/` klasöründe hazır, yayınlanmadı. Yeni özellikler (süreçler, servisler) eklenmeli. Gizlilik metni plana göre gözden geçirilmeli. |
-| Relay | Kod hazır, kurulmadı. Bölüm 4. |
+| Relay | #ST6000 projesinde çalışıyor, public açılması bekleniyor. Bölüm 4. |
+| Kurulum asistanı | Terminal sürümü yazıldı, gerçek sunucuda denenmeli. Uygulama içi sürüm sırada. |
+| Resmi sayfa `relay.html` | Yazıldı, site ile birlikte yayınlanacak. |
 | 24 saatlik geçmiş | Sırada. |
 | iPad | Sırada. |
 | Servis kurma | Sırada. Plan kilidi hazır. |
@@ -116,7 +114,7 @@ Sıra: izleme ve QR eşleştirme → uçtan uca şifreleme → terminal ve dosya
 | Yönetim aracı | Kapsam konuşulacak. |
 | Impressum | Site yayınından önce gerekli. Bilgileri Süleyman verecek. |
 | Apple hesabı, TestFlight, push, App Store | Ürün bittikten sonra. |
-| GitHub reposu | Hâlâ Public olabilir. Private yapılmalı ve bir LICENSE kararı verilmeli. |
+| GitHub reposu | 2026-11-04'te hâlâ Public. Private yapılmalı ve bir LICENSE kararı verilmeli. |
 
 ## 8. Küçük teknik notlar
 

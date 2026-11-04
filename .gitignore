@@ -8,3 +8,4 @@ DerivedData/
 
 # Built by `make ios-resources` (needs Go); not committed
 ios/ServerMonitor/Resources/Agent/
+official/downloads/

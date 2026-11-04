@@ -272,25 +272,17 @@ Kapsam dışındaki container'lar üyenin telefonuna **hiç gönderilmez**. Bu f
 
 ### Relay'i kurmak (bir kez)
 
-Relay internetten erişilebilen tek bir yerde çalışır, örneğin mevcut bir sunucuda, var olan reverse proxy'nin arkasında. Ayrıntılar `relay/README.md` dosyasında.
+Relay'i her kullanıcı kendisi kurar, appinsource'un merkezi bir relay'i yoktur. Ekip trafiği senin seçtiğin makineden geçer. Relay internetten 80 ve 443 portlarıyla erişilebilen herhangi bir Linux makinede çalışır; bu makine izlediğin sunuculardan biri olabilir.
 
-```bash
-cd relay
-echo "RELAY_ADMIN_TOKEN=$(openssl rand -base64 36 | tr -d '/+=')" > .env
-docker compose up -d --build          # 127.0.0.1:8080 adresinde dinler
-cat .env                              # bu token uygulamaya girilecek
-```
+1. Alan adı için makineye bakan bir A kaydı aç, örneğin `relay.example.com`.
+2. Makinede kurulum asistanını başlat:
+   ```bash
+   sudo ./setup.sh
+   ```
+3. Soruları cevapla. Asistan alan adını sorar, DNS'i kontrol eder, boş bir port seçer ve web proxy'sini bulur. Caddy ve Nginx'i kendisi ayarlar, proxy yoksa Caddy kurmayı önerir. Neyi değiştireceğini gösterir ve onay almadan değiştirmez. Tekrar çalıştırılabilir; şifreyi ve veriyi korur.
+4. Sonda yazdığı adresi ve şifreyi uygulamada **Team → Set up relay** ekranına gir.
 
-Reverse proxy'de (Nginx) örneğin `monitor.appinsource.eu` için:
-
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:8080;
-    proxy_set_header X-Forwarded-For $remote_addr;
-    proxy_read_timeout 60s;
-    proxy_buffering off;
-}
-```
+Dosyalar ve İngilizce anlatım sitedeki `official/relay.html` sayfasındadır. Docker ile kurmak ve relay'i başka makineye taşımak için `relay/README.md` dosyasına bak.
 
 ### Ekibi kurmak (admin)
 

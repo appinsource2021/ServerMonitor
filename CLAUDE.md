@@ -141,10 +141,10 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Decided 2026-11-03 with Suleyman: Free = 1 server, watch only; Trial = 14 days, every feature but still 1 server (`serverLimit` is nil only on Pro; servers already in the list are never removed); Pro by server-count tiers or a one-time unlock, numbers still open. README § 13.
 
 ## Open work
-1. Deploy the relay. Decided 2026-11-04: for now in Suleyman's MCP workspace as a project (not on the host: the MCP server forbids that, and its host tools need a dashboard window), must stay movable. Steps: `docs/URUN-YOL-HARITASI.md` § 4, zip from `relay/make-workspace-zip.sh`.
+1. Relay. Decided 2026-11-04: there is no central relay; every user hosts their own (`relay/setup.sh`, a question-and-answer assistant; `official/relay.html` explains it; downloads from `relay/make-release.sh`). Suleyman's own runs in his MCP workspace as project #ST6000 (never on the host: the MCP server forbids it). It still has to be made public. `setup.sh` has only been dry-run. See roadmap § 3 and § 4.
 2. Fix the Swift 6 concurrency warnings in `TerminalScreen.swift` (they do not break the build).
 3. File manager follow-ups if wanted: rename/move, download to the phone, edit files over 64 KB (would need SFTP for the content).
-4. Relay setup assistant inside the app (Team → Set up relay → "Install on one of my servers"): SSH in like the agent installer, relay as a single Go binary under systemd, Caddy (or an existing Nginx vhost) for TLS on the domain, token generated and saved automatically, DNS checked. Suleyman asked for this on 2026-11-02.
+4. Relay setup assistant inside the app, the same questions as `relay/setup.sh` (Team → Set up relay → "Install on one of my servers"): SSH in like the agent installer, relay as a single Go binary under systemd, Caddy (or an existing Nginx vhost) for TLS on the domain, token generated and saved automatically, DNS checked. Suleyman asked for this on 2026-11-02.
 5. Promo website: built in `official/` (see "Website" above). Deployment waits for the relay host (item 1); an OG image and a Turkish page are open.
 6. The `srvmon` user explanation is published: `docs/SRVMON-USER.md` (Turkish), `official/srvmon-user.html` (English, website) and `MonitoringSetupView` (app). Keep the three in step.
 7. Consider making `srvmon` the login the app keeps even after a root install (the installer would create the user and switch the record to it, so the app never holds root). Agent self-update exists since 0.3.6; Terminal would run as `srvmon` then.

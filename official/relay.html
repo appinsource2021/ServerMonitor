@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run your own relay</title>
+<meta name="description" content="Team access in Server Monitor runs through a relay that you host yourself. A setup assistant asks a few questions and installs it on any Linux server.">
+<link rel="canonical" href="https://monitor.appinsource.eu/relay.html">
+<meta name="theme-color" content="#0B0D10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F6F7F9" media="(prefers-color-scheme: light)">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="stylesheet" href="assets/site.css">
+<script>try{var t=localStorage.getItem('sm-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href="./" aria-label="appinsource">app<span class="in">in</span>source</a>
+    <span class="product">Server Monitor</span>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav id="site-nav" class="nav" aria-label="Sections">
+      <a href="./#how">How it works</a>
+      <a href="./#features">Features</a>
+      <a href="./#security">Security</a>
+      <a href="./#team">Team</a>
+      <a href="./#faq">FAQ</a>
+      <div class="theme" role="group" aria-label="Theme">
+        <button type="button" data-theme-set="" aria-pressed="true">Auto</button>
+        <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+        <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+      </div>
+      <a class="btn btn-primary btn-sm" href="mailto:developer@appinsource.eu?subject=Server%20Monitor%3A%20access%20request">Request access</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap doc">
+  <a class="back" href="./">Server Monitor</a>
+  <h1>Run your own relay</h1>
+  <p class="lead">You need a relay only if other people should watch your servers. It runs on a machine you choose, so team traffic never passes through appinsource. A setup assistant installs it in a few minutes.</p>
+
+  <h2>What the relay does</h2>
+  <p>Think of it as a mailbox. A team member's phone leaves a request in the mailbox. Each server checks the mailbox by itself, picks up the request, and leaves the answer there. Because the servers connect out, none of them opens a port.</p>
+  <p>You do not need a relay for yourself. Your own iPhone reaches your servers directly over SSH.</p>
+
+  <h2>What you need</h2>
+  <ul>
+    <li>One Linux machine with systemd that the internet can reach on ports 80 and 443. It can be one of your servers.</li>
+    <li>A domain name with an A record that points to that machine, for example <code>relay.example.com</code>.</li>
+    <li>Root access on that machine, once.</li>
+  </ul>
+
+  <h2>Install it</h2>
+  <ol>
+    <li>Download the relay for your machine on that machine:
+      <pre><code>curl -fsSLO https://monitor.appinsource.eu/downloads/srvmon-relay-linux-amd64.tar.gz
+curl -fsSLO https://monitor.appinsource.eu/downloads/SHA256SUMS
+sha256sum -c SHA256SUMS --ignore-missing
+tar -xzf srvmon-relay-linux-amd64.tar.gz</code></pre>
+      On an ARM machine, use <code>arm64</code> instead of <code>amd64</code>.
+    </li>
+    <li>Start the assistant:
+      <pre><code>cd srvmon-relay
+sudo ./setup.sh</code></pre>
+    </li>
+    <li>Answer its questions. It asks for the domain, checks DNS, picks a free local port, and finds your web proxy. Caddy and Nginx are set up for you. With no proxy it offers to install Caddy. It shows what it will change and asks before it changes anything.</li>
+    <li>At the end it prints the relay address and the admin token. Keep the token private.</li>
+  </ol>
+
+  <h2>Connect the app</h2>
+  <ol>
+    <li>In the app, open <strong>Team</strong> and tap <strong>Set up relay</strong>.</li>
+    <li>Enter the relay address and the admin token.</li>
+    <li>Choose the servers to connect. The app tells each server's agent where the relay is, over your SSH login.</li>
+    <li>Invite people. Each one joins with a QR code and sees only what you allow.</li>
+  </ol>
+
+  <h2>Security</h2>
+  <ul>
+    <li>The relay runs as its own system user, without root, and listens only on the machine itself. The web proxy handles HTTPS.</li>
+    <li>Each member's phone signs every request. The agent checks the signature and the member's role itself, so the relay cannot give orders to your servers.</li>
+    <li>Members get no SSH and no terminal. File requests are refused.</li>
+    <li>The relay can read the team traffic that passes through it. That is why it should run on a machine you trust.</li>
+  </ul>
+
+  <h2>Move it later</h2>
+  <p>The relay keeps everything in one data folder and one token. Copy both to the new machine and point the domain there. With the same domain, servers and phones reconnect by themselves. With a new domain, connect the servers again and send new invites.</p>
+
+  <h2>If something goes wrong</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>What you see</th><th>Why</th><th>What to do</th></tr></thead>
+      <tbody>
+        <tr><td><code>https://…</code> does not answer</td><td>DNS does not point here yet, or ports 80 and 443 are closed</td><td>Check the A record and the firewall, then run <code>sudo ./setup.sh</code> again. It keeps your token and data.</td></tr>
+        <tr><td>The relay does not answer on the machine</td><td>The service did not start</td><td><code>journalctl -u srvmon-relay -n 30</code></td></tr>
+        <tr><td>Servers keep going offline</td><td>The proxy cuts waiting requests</td><td>Set the proxy's read timeout to 60 seconds or more and turn response buffering off.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <a class="wordmark" href="./" aria-label="appinsource">app<span class="in">in</span>source</a>
+    <nav aria-label="Footer">
+      <a href="./">Server Monitor</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="mailto:developer@appinsource.eu">Contact</a>
+    </nav>
+    <p class="credit">Server Monitor is designed and developed by Süleyman Topaloğlu, appinsource.</p>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>
