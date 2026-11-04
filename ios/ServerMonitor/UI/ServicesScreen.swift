@@ -35,6 +35,23 @@ struct ServicesCard: View {
                     Text("Failed: " + names.joined(separator: ", ") + (failed.count > 4 ? " +\(failed.count - 4) more" : ""))
                         .font(.system(size: 12)).foregroundStyle(Theme.crit).lineLimit(2)
                 }
+                let known = snap.knownServices.filter { $0.known.id != "docker" }
+                if !known.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(known, id: \.unit.name) { k in
+                                HStack(spacing: 5) {
+                                    StatusMark(health: k.unit.health, size: 7)
+                                    Text(k.known.title).font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.text)
+                                }
+                                .padding(.horizontal, 9).padding(.vertical, 5)
+                                .background(Theme.surface2, in: Capsule())
+                                .overlay(Capsule().stroke(Theme.border))
+                            }
+                        }
+                    }
+                    .accessibilityLabel("Known services: " + known.map { "\($0.known.title) \($0.unit.active)" }.joined(separator: ", "))
+                }
             }
         }
     }
@@ -56,6 +73,7 @@ struct ServicesScreen: View {
                     header(server, snap)
                     if let e = state.error { ReconnectBanner(message: e) { await store.reconnect(server) } }
                     FilterField(text: $filter, placeholder: "Filter services")
+                    if filter.isEmpty { knownSection(server, snap) }
                     list(server, snap)
                 } else if let server, let e = state.error {
                     ReconnectBanner(message: e) { await store.reconnect(server) }
@@ -103,6 +121,40 @@ struct ServicesScreen: View {
     }
 
     @ViewBuilder
+    private func knownSection(_ server: ServerRecord, _ snap: Snapshot) -> some View {
+        let known = snap.knownServices.filter { $0.known.id != "docker" }
+        if !known.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                SectionHeader(text: "Known services")
+                ListCard {
+                    ForEach(known, id: \.unit.name) { k in
+                        NavigationLink {
+                            ServiceDetailView(serverID: server.id, unitName: k.unit.name)
+                        } label: {
+                            HStack(spacing: 12) {
+                                ServiceIcon(symbol: k.known.icon, color: k.known.color)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(k.known.title).font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.text)
+                                    Text(k.unit.name.replacingOccurrences(of: ".service", with: "") + " · " + k.unit.sub)
+                                        .font(.system(size: 12)).foregroundStyle(k.unit.health == .critical ? Theme.crit : Theme.text2)
+                                }
+                                Spacer()
+                                StatusMark(health: k.unit.health)
+                                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text3)
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                            .overlay(alignment: .bottom) { Rectangle().fill(Theme.border).frame(height: 1) }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            SectionHeader(text: "All services")
+        }
+    }
+
+    @ViewBuilder
     private func list(_ server: ServerRecord, _ snap: Snapshot) -> some View {
         if !snap.systemdAvailable {
             Card { Text("systemd not available.").font(.system(size: 13)).foregroundStyle(Theme.text2) }
@@ -112,7 +164,7 @@ struct ServicesScreen: View {
             ListCard {
                 ForEach(matching(snap)) { s in
                     NavigationLink {
-                        LogsScreen(serverID: server.id, source: .service(s.name), title: s.name)
+                        ServiceDetailView(serverID: server.id, unitName: s.name)
                     } label: {
                         HStack(spacing: 12) {
                             StatusMark(health: s.health)

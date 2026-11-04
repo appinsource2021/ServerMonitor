@@ -321,6 +321,8 @@ struct ShimmerSweep: View {
 struct ActionBanner: View {
     let phase: ActionPhase
     let container: String
+    var subject = "Container"
+    var engine = "Docker"
     let onDismiss: () -> Void
 
     var body: some View {
@@ -388,9 +390,9 @@ struct ActionBanner: View {
         switch phase {
         case .idle: ""
         case .sending(let a, _):
-            a == "start" ? "Sending command to Docker" : "Docker is stopping the container (up to 10 s)"
-        case .verifying: "Checking the new container state"
-        case .done(let a, _): a == "stop" ? "Container is stopped." : "Container is up and running."
+            a == "start" ? "Sending command to \(engine)" : "\(engine) is stopping the \(subject.lowercased()) (up to 10 s)"
+        case .verifying: "Checking the new \(subject.lowercased()) state"
+        case .done(let a, _): a == "stop" ? "\(subject) is stopped." : "\(subject) is up and running."
         case .failed(_, let m): m
         }
     }
@@ -400,7 +402,7 @@ struct ActionBanner: View {
         return HStack(spacing: 6) {
             StepDot(label: "Command", state: verifying ? .done : .active)
             Rectangle().fill(verifying ? Theme.ok : Theme.border).frame(height: 2).frame(maxWidth: 28)
-            StepDot(label: "Docker", state: verifying ? .done : .pending)
+            StepDot(label: engine, state: verifying ? .done : .pending)
             Rectangle().fill(verifying ? Theme.accent : Theme.border).frame(height: 2).frame(maxWidth: 28)
             StepDot(label: "Verify", state: verifying ? .active : .pending)
         }

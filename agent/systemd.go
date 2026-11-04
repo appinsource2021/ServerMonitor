@@ -85,3 +85,73 @@ func serviceLogs(ctx context.Context, unit string, tail int) ([]LogLine, error) 
 	}
 	return lines, nil
 }
+
+// --- service actions (agent 0.4.0) ---
+
+// Units the app must never touch: the agent itself, and nothing that would cut the SSH
+// path the app arrives on. Restarting sshd is fine (open sessions survive), stopping is not.
+var serviceNeverTouch = map[string]bool{"srvmon-agent.service": true}
+var serviceNeverStop = map[string]bool{"ssh.service": true, "sshd.service": true, "systemd-logind.service": true, "dbus.service": true}
+
+// systemctlRun is swapped in tests.
+var systemctlRun = func(ctx context.Context, args ...string) ([]byte, error) {
+	return killableCmd(ctx, "systemctl", args...).CombinedOutput()
+}
+
+// serviceAction runs systemctl start|stop|restart on a unit and returns its state afterwards.
+// The unit may be given with or without ".service".
+func serviceAction(ctx context.Context, unit, action string) (Service, error) {
+	if !strings.HasSuffix(unit, ".service") {
+		unit += ".service"
+	}
+	if !unitNameRe.MatchString(unit) {
+		return Service{}, errors.New("invalid unit name")
+	}
+	switch action {
+	case "start", "stop", "restart":
+	default:
+		return Service{}, errors.New("unknown action (start, stop, restart)")
+	}
+	if serviceNeverTouch[unit] {
+		return Service{}, errors.New(unit + " is managed by the app itself; update it from the server list")
+	}
+	if action != "start" && serviceNeverStop[unit] {
+		return Service{}, errors.New(unit + " keeps this connection alive and is never stopped or restarted from the app")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	if out, err := systemctlRun(ctx, action, unit); err != nil {
+		msg := strings.TrimSpace(string(out))
+		if msg == "" {
+			msg = err.Error()
+		}
+		return Service{}, errors.New(msg)
+	}
+	return serviceState(ctx, unit)
+}
+
+// serviceState reads one unit's state (used right after an action, before the next tick).
+func serviceState(ctx context.Context, unit string) (Service, error) {
+	out, err := systemctlRun(ctx, "show", unit, "-p", "LoadState,ActiveState,SubState,Description", "--no-pager")
+	if err != nil {
+		return Service{}, errors.New(strings.TrimSpace(string(out)))
+	}
+	s := Service{Name: unit}
+	for _, line := range strings.Split(string(out), "\n") {
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		switch k {
+		case "LoadState":
+			s.Load = v
+		case "ActiveState":
+			s.Active = v
+		case "SubState":
+			s.Sub = v
+		case "Description":
+			s.Description = v
+		}
+	}
+	return s, nil
+}

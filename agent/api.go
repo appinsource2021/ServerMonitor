@@ -44,6 +44,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("POST /v1/containers/{id}/{action}", s.containerAction)
 	m.HandleFunc("GET /v1/services", s.services)
 	m.HandleFunc("GET /v1/services/{name}/logs", s.serviceLogs)
+	m.HandleFunc("POST /v1/services/{name}/{action}", s.serviceAction)
 	m.HandleFunc("GET /v1/alerts", s.alertsList)
 	m.HandleFunc("GET /v1/config", s.config)
 	m.HandleFunc("PUT /v1/rules", s.putRules)
@@ -250,6 +251,25 @@ func (s *Server) containerAction(w http.ResponseWriter, r *http.Request) {
 		resp["state"] = updated
 	}
 	writeJSON(w, 200, resp)
+}
+
+// POST /v1/services/{name}/{action}: start, stop or restart a systemd unit.
+// Same switch as container actions (allow_actions); admins over SSH only (HandleMember never routes it).
+func (s *Server) serviceAction(w http.ResponseWriter, r *http.Request) {
+	if !s.store.Get().AllowActions {
+		writeErr(w, 403, "service actions are disabled on this server (allow_actions=false)")
+		return
+	}
+	name, action := r.PathValue("name"), r.PathValue("action")
+	t0 := time.Now()
+	st, err := serviceAction(r.Context(), name, action)
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	// make the list reflect the change before the next 30 s tick
+	s.collector.collectServices(r.Context())
+	writeJSON(w, 200, map[string]any{"ok": true, "service": st.Name, "action": action, "state": st, "took_ms": time.Since(t0).Milliseconds()})
 }
 
 func (s *Server) services(w http.ResponseWriter, r *http.Request) {

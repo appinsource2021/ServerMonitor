@@ -231,7 +231,7 @@ struct ServerActionsMenu: View, Equatable {
                         actionsOn = cfg.allowActions
                     } catch { message = friendlyError(error) }
                 }
-            } label: { Label("Container actions…", systemImage: "switch.2") }
+            } label: { Label("Container & service actions…", systemImage: "switch.2") }
             if server.canUpdateFromApp {
                 Button {
                     let inst = Installer(input: NewServerInput(host: server.host, username: server.username), store: store, existing: server)

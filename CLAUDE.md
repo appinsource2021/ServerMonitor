@@ -51,7 +51,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Entitlements stay **empty**. A personal Apple team cannot use Push Notifications, so APNs stays unused until there is a paid team.
 
 ## Versions
-- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.3.7** now.
+- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.4.0** now.
 - After agent changes:
   1. Bump both places.
   2. Run `make ios-resources`.
@@ -122,6 +122,10 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Colors mirror `Theme.swift`; the brand wordmark is `.wordmark` (`in` blue). The mock screens (`.app`) always keep the app's dark look. Status is shown by shape and color, as in the app.
 - CTA is `mailto:developer@appinsource.eu` ("Request access") until the app is on the App Store. No version numbers on the pages.
 - The steps in `srvmon-user.html` must match `MonitoringSetupView` and `MonitoringSetupScript.make`; change all three together.
+
+## Services (agent 0.4.0)
+- `POST /v1/services/{name}/{action}` (start, stop, restart) in `agent/systemd.go` `serviceAction`: gated by `allow_actions` like containers, admin over SSH only (HandleMember never routes it). Never touched: `srvmon-agent.service`; never stopped or restarted: `ssh`/`sshd`, `systemd-logind`, `dbus` (start is allowed). `systemctlRun` is swapped in tests (`agent/services_test.go`). After the action the agent re-collects the unit list so the app sees the new state at once.
+- iOS: `Model/KnownServices.swift` is the catalogue (Nginx, Apache, Caddy, MySQL/MariaDB, PostgreSQL, Redis, PHP-FPM, Docker, SSH, fail2ban …) matched on the unit-name prefix; `Snapshot.knownServices`. `ServicesCard` shows them as chips, `ServicesScreen` lists them first under "Known services", every row opens `UI/ServiceDetailView.swift` (state, Start/Stop/Restart with confirm, journal). Actions are gated by `Feature.serviceActions`; a 404 from an older agent says to update it. The ··· menu switch is now "Container & service actions…" (same `allow_actions` flag).
 
 ## Plans (app 0.4.0, `Services/Plan.swift`, `UI/PlanView.swift`)
 - `Feature` lists everything a plan can lock; `PlanConfig` holds the numbers (`trialDays` 14, `freeServerLimit` 1, `freeFeatures` empty = Free is watch only, `purchasesEnabled` **false**).
