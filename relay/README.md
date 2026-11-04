@@ -55,5 +55,25 @@ response buffering off.
 
 Check: `curl -s https://monitor.appinsource.eu/healthz` must answer `{"ok":true}`.
 
+## Move to another server
+
+The relay is not tied to its machine. Agents and phones know only the domain, so a move changes
+nothing on them. Everything it needs is `.env` (admin token) and `relay.json`.
+
+```bash
+# old server, in relay/
+./backup.sh                       # stops nothing; writes srvmon-relay-backup-<date>.tgz (mode 600)
+docker compose down               # so nothing changes after the copy
+scp srvmon-relay-backup-*.tgz root@NEW:/root/
+
+# new server, in relay/ (copy this folder there first)
+./restore.sh /root/srvmon-relay-backup-<date>.tgz
+docker compose up -d --build
+```
+
+Then set up the proxy on the new server, point the domain's DNS at it and check `/healthz`.
+Agents reconnect by themselves once DNS has changed. The backup holds the admin token: keep it
+private and delete it when the move is done. Lower the DNS TTL a day before to shorten the gap.
+
 Data (servers, members, invites) lives in the `relay-data` volume as `relay.json`; secrets and
 tokens are stored only as SHA-256 hashes.

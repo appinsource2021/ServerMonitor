@@ -3,6 +3,8 @@
 The owner is Suleyman (appinsource). Talk to him in **Turkish**. Keep code, identifiers and UI strings in English.
 The user-facing README (`README.md`) is in Turkish. Update it whenever a feature or a fix changes how the app is used.
 
+**Product decisions live in `docs/URUN-YOL-HARITASI.md`. Read it before planning work, and write every new decision there first.**
+
 ## Brand rule (strict)
 - Always write **appinsource**, all lowercase. Never "AppInSource" or "Appinsource".
 - In the UI, use `BrandWordmark` (`ios/ServerMonitor/UI/Brand.swift`):
@@ -139,7 +141,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Decided 2026-11-03 with Suleyman: Free = 1 server, watch only; Trial = 14 days, every feature but still 1 server (`serverLimit` is nil only on Pro; servers already in the list are never removed); Pro by server-count tiers or a one-time unlock, numbers still open. README § 13.
 
 ## Open work
-1. Deploy the relay; Suleyman has not yet decided where it runs.
+1. Deploy the relay. Decided 2026-11-04: for now in Suleyman's MCP workspace as a project (not on the host: the MCP server forbids that, and its host tools need a dashboard window), must stay movable. Steps: `docs/URUN-YOL-HARITASI.md` § 4, zip from `relay/make-workspace-zip.sh`.
 2. Fix the Swift 6 concurrency warnings in `TerminalScreen.swift` (they do not break the build).
 3. File manager follow-ups if wanted: rename/move, download to the phone, edit files over 64 KB (would need SFTP for the content).
 4. Relay setup assistant inside the app (Team → Set up relay → "Install on one of my servers"): SSH in like the agent installer, relay as a single Go binary under systemd, Caddy (or an existing Nginx vhost) for TLS on the domain, token generated and saved automatically, DNS checked. Suleyman asked for this on 2026-11-02.
@@ -147,7 +149,9 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 6. The `srvmon` user explanation is published: `docs/SRVMON-USER.md` (Turkish), `official/srvmon-user.html` (English, website) and `MonitoringSetupView` (app). Keep the three in step.
 7. Consider making `srvmon` the login the app keeps even after a root install (the installer would create the user and switch the record to it, so the app never holds root). Agent self-update exists since 0.3.6; Terminal would run as `srvmon` then.
 
-8. Agent for macOS and Windows. Suleyman (2026-11-04) would like both. The agent is Linux only today: metrics read `/proc`, the installer needs systemd, `make` builds linux binaries. Needs per-OS collectors behind one interface, launchd (macOS) and a Windows service, and a different install path on each. Not started; it needs a decision on priority.
+8. Agent for macOS and Windows. Suleyman (2026-11-04) wants both, Mac first, as a separate Mac program that connects out to the relay and pairs by key (roadmap § 6). The agent is Linux only today: metrics read `/proc`, the installer needs systemd, `make` builds linux binaries. Needs per-OS collectors behind one interface, launchd (macOS) and a Windows service, and a different install path on each. Not started; it needs a decision on priority.
+9. Management tool: a web panel, next to the website, where the relay's server is chosen (roadmap § 5). Scope still to be discussed.
+10. Next in the app: 24-hour history, iPad, service install catalogue, demo server.
 
 ## Folder notes
 - `_old/` holds the zips that were used to sync from a cloud session. It is safe to delete.

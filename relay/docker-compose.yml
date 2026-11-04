@@ -12,3 +12,4 @@ services:
       - "127.0.0.1:8080:8080"
 volumes:
   relay-data:
+    name: srvmon-relay-data   # fixed name, whatever the folder is called: backup.sh and restore.sh rely on it
