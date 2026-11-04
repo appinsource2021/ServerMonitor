@@ -25,7 +25,7 @@ struct PlanSheet: View {
                             Text("Your plan").font(.system(size: 12, weight: .semibold)).tracking(0.7).foregroundStyle(Theme.text2)
                             Text(plans.statusLine).font(.system(size: 17, weight: .semibold))
                             if plans.plan == .trial {
-                                Text("Everything is open until \(plans.trialEnds.formatted(date: .abbreviated, time: .omitted)). After that the app keeps watching your first server; the features below need Pro.")
+                                Text("Every feature is open on one server until \(plans.trialEnds.formatted(date: .abbreviated, time: .omitted)). After that the server stays and keeps being watched; the features below need Pro.")
                                     .font(.system(size: 13)).foregroundStyle(Theme.text2)
                             } else if plans.plan == .free {
                                 Text("Watching stays free: metrics, Docker and services, health check and alerts inside the app.")

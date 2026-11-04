@@ -33,7 +33,7 @@ enum Feature: String, CaseIterable, Identifiable {
 
     var detail: String {
         switch self {
-        case .moreServers: "Free watches one server. Pro watches as many as you add."
+        case .moreServers: "Free and Trial watch one server. Pro watches as many as you add."
         case .terminal: "A real SSH terminal with htop, vim and quick commands."
         case .files: "Browse, view, edit, upload and delete files on the server."
         case .cleanup: "Reclaim disk space from Docker, caches and old logs."
@@ -125,7 +125,8 @@ final class PlanStore {
 
     var plan: Plan { simulated ?? actual }
 
-    var serverLimit: Int? { plan == .free ? PlanConfig.freeServerLimit : nil }
+    /// Free and Trial watch one server; servers already in the list are never removed.
+    var serverLimit: Int? { plan == .pro ? nil : PlanConfig.freeServerLimit }
 
     func allows(_ f: Feature) -> Bool {
         plan != .free || PlanConfig.freeFeatures.contains(f)
@@ -141,7 +142,7 @@ final class PlanStore {
     var statusLine: String {
         switch plan {
         case .pro: "Pro"
-        case .trial: "Trial · \(trialDaysLeft) day\(trialDaysLeft == 1 ? "" : "s") left"
+        case .trial: "Trial · \(trialDaysLeft) day\(trialDaysLeft == 1 ? "" : "s") left · \(PlanConfig.freeServerLimit) server"
         case .free: "Free · \(PlanConfig.freeServerLimit) server, watch only"
         }
     }

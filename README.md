@@ -426,7 +426,7 @@ Uygulama ürün olarak çıkınca üç planı olacak. Bugün satın alma yok; he
 
 | | Free | Trial (ilk 14 gün) | Pro |
 |---|---|---|---|
-| Sunucu | 1 | sınırsız | sınırsız |
+| Sunucu | 1 | 1 | sınırsız |
 | İzleme, Docker ve servis listeleri, health check, uygulama içi alarmlar | var | var | var |
 | Terminal | yok | var | var |
 | Dosya yöneticisi, disk analizi, smart cleanup | yok | var | var |
@@ -436,7 +436,7 @@ Uygulama ürün olarak çıkınca üç planı olacak. Bugün satın alma yok; he
 
 - Free "bak ama dokunma" demek: tek sunucuyu izlersin, değiştiren her şey Pro.
 - Deneme süresi uygulamanın ilk açıldığı gün başlar. Tarih Keychain'de tutulur; uygulamayı silip yeniden kurmak süreyi sıfırlamaz.
-- Deneme bitince hiçbir veri silinmez. İkinci ve sonraki sunucular listede kalır, sadece kilitli ekranlar "Pro gerekiyor" der.
+- Deneme süresinde de tek sunucu eklenir; Pro'dan düşen ya da daha önce eklenmiş sunucular listede kalır ve izlenmeye devam eder, hiçbir veri silinmez. Sadece kilitli ekranlar "Pro gerekiyor" der.
 - Kilitli bir özelliğe dokununca **Server Monitor Pro** sayfası açılır: planın, deneme bitiş tarihi ve Pro'nun içerdiği liste.
 - **Settings → Plan → Simulate:** uygulamanın Free ya da Trial'da nasıl davrandığını görmek için. Sahip olduğun planı değiştirmez; **Off** gerçek plana döner.
 - Sayılar (14 gün, 1 sunucu) ve kilitli özellik listesi tek dosyadadır: `ios/ServerMonitor/Services/Plan.swift`.

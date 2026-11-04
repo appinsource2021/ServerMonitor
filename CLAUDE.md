@@ -127,7 +127,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - `Feature` lists everything a plan can lock; `PlanConfig` holds the numbers (`trialDays` 14, `freeServerLimit` 1, `freeFeatures` empty = Free is watch only, `purchasesEnabled` **false**).
 - `PlanStore.shared.plan` is `.pro` while `purchasesEnabled` is false, so nothing is locked today. StoreKit sets `purchased` later. The trial start date is in the Keychain (`plan.trialStarted`); `simulated` (UserDefaults `plan.simulated`) is the Settings → Plan → Simulate switch.
 - Gates: screens ask `plans.allows(.x)` and open `PlanSheet(reason:)` when locked. Gated today: add server beyond the limit (`ServerListView.addServer`), Terminal and Disk (`ServerDetailView`), Smart cleanup (`DiskUsageView`), container buttons (`ContainerDetailView.actionButton`), push section (`SettingsView`), Team tab (`RootView` → `PlanLockedScreen`). New features (service actions, service install) must go through the same check.
-- Decided 2026-11-03 with Suleyman: Free = 1 server, watch only; Trial = 14 days everything; Pro by server-count tiers or a one-time unlock, numbers still open. README § 13.
+- Decided 2026-11-03 with Suleyman: Free = 1 server, watch only; Trial = 14 days, every feature but still 1 server (`serverLimit` is nil only on Pro; servers already in the list are never removed); Pro by server-count tiers or a one-time unlock, numbers still open. README § 13.
 
 ## Open work
 1. Deploy the relay; Suleyman has not yet decided where it runs.
