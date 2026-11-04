@@ -45,6 +45,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /v1/services", s.services)
 	m.HandleFunc("GET /v1/services/{name}/logs", s.serviceLogs)
 	m.HandleFunc("POST /v1/services/{name}/{action}", s.serviceAction)
+	m.HandleFunc("GET /v1/processes", s.processes)
 	m.HandleFunc("GET /v1/alerts", s.alertsList)
 	m.HandleFunc("GET /v1/config", s.config)
 	m.HandleFunc("PUT /v1/rules", s.putRules)

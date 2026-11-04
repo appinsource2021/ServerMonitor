@@ -118,15 +118,18 @@ struct ServerDetailView: View {
     }
 
     private func toolsRow(_ server: ServerRecord) -> some View {
-        HStack(spacing: 8) {
-            Button { showHealth = true } label: { toolLabel("Health check", "stethoscope") }
-            if plans.allows(.terminal) {
-                NavigationLink { TerminalScreen(server: server, sshSession: store.session(for: server)) } label: {
-                    toolLabel("Terminal", "terminal")
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Button { showHealth = true } label: { toolLabel("Health check", "stethoscope") }
+                if plans.allows(.terminal) {
+                    NavigationLink { TerminalScreen(server: server, sshSession: store.session(for: server)) } label: {
+                        toolLabel("Terminal", "terminal")
+                    }
+                } else {
+                    Button { locked = .terminal } label: { toolLabel("Terminal", "lock") }
                 }
-            } else {
-                Button { locked = .terminal } label: { toolLabel("Terminal", "lock") }
             }
+            NavigationLink { ProcessesScreen(serverID: server.id) } label: { toolLabel("Processes", "list.bullet.rectangle") }
         }
         .buttonStyle(.plain)
     }

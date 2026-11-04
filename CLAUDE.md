@@ -51,7 +51,7 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - Entitlements stay **empty**. A personal Apple team cannot use Push Notifications, so APNs stays unused until there is a paid team.
 
 ## Versions
-- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.4.0** now.
+- The agent version is in `agent/main.go` (`var version`) and in `agent/Makefile` (`VERSION ?=`). It is **0.4.1** now.
 - After agent changes:
   1. Bump both places.
   2. Run `make ios-resources`.
@@ -127,6 +127,11 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 - `POST /v1/services/{name}/{action}` (start, stop, restart) in `agent/systemd.go` `serviceAction`: gated by `allow_actions` like containers, admin over SSH only (HandleMember never routes it). Never touched: `srvmon-agent.service`; never stopped or restarted: `ssh`/`sshd`, `systemd-logind`, `dbus` (start is allowed). `systemctlRun` is swapped in tests (`agent/services_test.go`). After the action the agent re-collects the unit list so the app sees the new state at once.
 - iOS: `Model/KnownServices.swift` is the catalogue (Nginx, Apache, Caddy, MySQL/MariaDB, PostgreSQL, Redis, PHP-FPM, Docker, SSH, fail2ban …) matched on the unit-name prefix; `Snapshot.knownServices`. `ServicesCard` shows them as chips, `ServicesScreen` lists them first under "Known services", every row opens `UI/ServiceDetailView.swift` (state, Start/Stop/Restart with confirm, journal). Actions are gated by `Feature.serviceActions`; a 404 from an older agent says to update it. The ··· menu switch is now "Container & service actions…" (same `allow_actions` flag).
 
+## Processes (agent 0.4.1, `agent/processes.go`)
+- `GET /v1/processes`: two `/proc` samples one second apart. `cpu_percent` is the share of the whole host (process ticks over the host's total ticks, like the CPU gauge). Returns the top 60 by CPU plus the top 60 by memory, and `total`. Kernel threads are left out; `container` comes from the process's cgroup.
+- Admin over SSH only: command lines can hold passwords, so HandleMember never routes it (`processes_test.go`). Read only, no kill yet.
+- iOS: `UI/ProcessesScreen.swift`, opened from the Processes button under Health check and Terminal. Own 5-second loop, CPU/Memory sort, filter, tap a row for the full command. Not plan-gated (watching is free). A 404 shows "needs agent 0.4.1".
+
 ## Plans (app 0.4.0, `Services/Plan.swift`, `UI/PlanView.swift`)
 - `Feature` lists everything a plan can lock; `PlanConfig` holds the numbers (`trialDays` 14, `freeServerLimit` 1, `freeFeatures` empty = Free is watch only, `purchasesEnabled` **false**).
 - `PlanStore.shared.plan` is `.pro` while `purchasesEnabled` is false, so nothing is locked today. StoreKit sets `purchased` later. The trial start date is in the Keychain (`plan.trialStarted`); `simulated` (UserDefaults `plan.simulated`) is the Settings → Plan → Simulate switch.
@@ -141,6 +146,8 @@ xcodebuild -project ios/ServerMonitor.xcodeproj -scheme ServerMonitor -configura
 5. Promo website: built in `official/` (see "Website" above). Deployment waits for the relay host (item 1); an OG image and a Turkish page are open.
 6. The `srvmon` user explanation is published: `docs/SRVMON-USER.md` (Turkish), `official/srvmon-user.html` (English, website) and `MonitoringSetupView` (app). Keep the three in step.
 7. Consider making `srvmon` the login the app keeps even after a root install (the installer would create the user and switch the record to it, so the app never holds root). Agent self-update exists since 0.3.6; Terminal would run as `srvmon` then.
+
+8. Agent for macOS and Windows. Suleyman (2026-11-04) would like both. The agent is Linux only today: metrics read `/proc`, the installer needs systemd, `make` builds linux binaries. Needs per-OS collectors behind one interface, launchd (macOS) and a Windows service, and a different install path on each. Not started; it needs a decision on priority.
 
 ## Folder notes
 - `_old/` holds the zips that were used to sync from a cloud session. It is safe to delete.
