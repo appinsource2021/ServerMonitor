@@ -1,13 +1,13 @@
 package main
 
 import (
-	"io"
 	"context"
 	"crypto/ed25519"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"regexp"
