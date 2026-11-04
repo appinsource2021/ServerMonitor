@@ -275,12 +275,13 @@ Kapsam dışındaki container'lar üyenin telefonuna **hiç gönderilmez**. Bu f
 Relay'i her kullanıcı kendisi kurar, appinsource'un merkezi bir relay'i yoktur. Ekip trafiği senin seçtiğin makineden geçer. Relay internetten 80 ve 443 portlarıyla erişilebilen herhangi bir Linux makinede çalışır; bu makine izlediğin sunuculardan biri olabilir.
 
 1. Alan adı için makineye bakan bir A kaydı aç, örneğin `relay.example.com`.
-2. Makinede kurulum asistanını başlat:
+2. Uygulamada **Team → Set up relay → Share installer** ile `srvmon-relay-setup.sh` dosyasını al ve relay olacak makineye kopyala. Tek dosyadır, içinde relay programı ve kurulum asistanı vardır, internetten bir şey indirmez.
+3. O makinede çalıştır:
    ```bash
-   sudo ./setup.sh
+   sudo sh srvmon-relay-setup.sh
    ```
-3. Soruları cevapla. Asistan alan adını sorar, DNS'i kontrol eder, boş bir port seçer ve web proxy'sini bulur. Caddy ve Nginx'i kendisi ayarlar, proxy yoksa Caddy kurmayı önerir. Neyi değiştireceğini gösterir ve onay almadan değiştirmez. Tekrar çalıştırılabilir; şifreyi ve veriyi korur.
-4. Sonda yazdığı adresi ve şifreyi uygulamada **Team → Set up relay** ekranına gir.
+4. Soruları cevapla. Asistan alan adını sorar, DNS'i kontrol eder, boş bir port seçer ve web proxy'sini bulur. Caddy ve Nginx'i kendisi ayarlar, proxy yoksa Caddy kurmayı önerir. Neyi değiştireceğini gösterir ve onay almadan değiştirmez. Tekrar çalıştırılabilir; şifreyi ve veriyi korur.
+5. Sonda yazdığı adresi ve şifreyi aynı ekrana gir.
 
 Dosyalar ve İngilizce anlatım sitedeki `official/relay.html` sayfasındadır. Docker ile kurmak ve relay'i başka makineye taşımak için `relay/README.md` dosyasına bak.
 

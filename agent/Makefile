@@ -18,6 +18,7 @@ ios-resources: build
 	mkdir -p $(IOS_RES)
 	cp $(OUT)/srvmon-agent-linux-amd64 $(OUT)/srvmon-agent-linux-arm64 $(OUT)/SHA256SUMS scripts/install.sh scripts/uninstall.sh $(IOS_RES)/
 	echo $(VERSION) > $(IOS_RES)/VERSION
+	sh ../relay/make-release.sh $(abspath $(IOS_RES))
 
 clean:
 	rm -rf $(OUT)

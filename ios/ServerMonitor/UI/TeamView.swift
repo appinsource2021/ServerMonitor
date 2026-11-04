@@ -72,7 +72,7 @@ struct TeamView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Image(systemName: "point.3.connected.trianglepath.dotted").font(.system(size: 28)).foregroundStyle(Theme.accent)
                 Text("Share servers without SSH").font(.system(size: 17, weight: .semibold))
-                Text("Team members reach your servers through the relay. Servers connect out to it, so no port is opened on them. Enter the relay address and its admin token to start.")
+                Text("Team members reach your servers through a relay that you run yourself, on any Linux machine you choose. Servers connect out to it, so no port is opened on them.")
                     .font(.system(size: 14)).foregroundStyle(Theme.text2)
                 Button("Set up relay") { showRelaySetup = true }.buttonStyle(PrimaryButtonStyle())
             }
@@ -244,10 +244,46 @@ struct RoleChip: View {
 
 // MARK: - Relay setup
 
+/// Hands out the one-file installer: whoever runs it on a machine makes that machine a relay.
+struct RelayInstallerCard: View {
+    private let steps = [
+        "Point a domain name at the machine that will be the relay.",
+        "Send it this file, for example by AirDrop to a Mac and then scp.",
+        "On that machine, run the command below and answer its questions.",
+        "Enter the address and token it prints in the fields below.",
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader(text: "Install your relay")
+            Card(padding: 14) {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(Array(steps.enumerated()), id: \.offset) { i, s in
+                        HStack(alignment: .top, spacing: 10) {
+                            Text("\(i + 1)").font(Theme.mono(13, .medium)).foregroundStyle(Theme.accent)
+                            Text(s).font(.system(size: 14)).foregroundStyle(Theme.text)
+                        }
+                    }
+                    Text("sudo sh srvmon-relay-setup.sh")
+                        .font(Theme.mono(13)).foregroundStyle(Theme.text).textSelection(.enabled)
+                        .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Theme.logBg, in: RoundedRectangle(cornerRadius: 10))
+                    if let file = BundledAgent.relayInstallerURL {
+                        ShareLink(item: file) { Label("Share installer", systemImage: "square.and.arrow.up") }
+                            .buttonStyle(PrimaryButtonStyle(secondary: true))
+                    } else {
+                        Text("The installer is missing from this build.").font(.system(size: 13)).foregroundStyle(Theme.crit)
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct RelaySetupView: View {
     @Environment(ServerStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @State private var url = RelaySettings.url.isEmpty ? "https://monitor.appinsource.eu" : RelaySettings.url
+    @State private var url = RelaySettings.url
     @State private var token = RelaySettings.adminToken ?? ""
     @State private var testing = false
     @State private var result: String?
@@ -256,6 +292,8 @@ struct RelaySetupView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    RelayInstallerCard()
+                    SectionHeader(text: "Connect this app")
                     ListCard {
                         field("Address", text: $url, mono: true, keyboard: .URL)
                         Rectangle().fill(Theme.border).frame(height: 1)
@@ -265,7 +303,7 @@ struct RelaySetupView: View {
                         }
                         .padding(.horizontal, 14).frame(minHeight: 48)
                     }
-                    Text("The admin token is in the relay's data folder (admin-token) or its RELAY_ADMIN_TOKEN setting. It stays in this iPhone's Keychain.")
+                    Text("The installer prints the address and the admin token when it finishes. The token stays in this iPhone's Keychain.")
                         .font(.system(size: 12)).foregroundStyle(Theme.text2).padding(.horizontal, 4)
                     if let result { Text(result).font(.system(size: 13)).foregroundStyle(result.hasPrefix("✓") ? Theme.ok : Theme.crit) }
                     Button {

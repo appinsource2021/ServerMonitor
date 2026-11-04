@@ -384,6 +384,13 @@ enum BundledAgent {
         return s.trimmingCharacters(in: .whitespacesAndNewlines)
     }()
 
+    /// The one-file relay installer (`relay/make-release.sh`), shared from Team → Set up relay.
+    static var relayInstallerURL: URL? {
+        guard let dir = Bundle.main.url(forResource: "Agent", withExtension: nil) else { return nil }
+        let url = dir.appendingPathComponent("srvmon-relay-setup.sh")
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
     static func binaryURL(arch: String) -> URL? {
         guard let dir = Bundle.main.url(forResource: "Agent", withExtension: nil) else { return nil }
         let url = dir.appendingPathComponent("srvmon-agent-linux-\(arch)")

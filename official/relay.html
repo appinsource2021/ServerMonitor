@@ -55,16 +55,13 @@
 
   <h2>Install it</h2>
   <ol>
-    <li>Download the relay for your machine on that machine:
-      <pre><code>curl -fsSLO https://monitor.appinsource.eu/downloads/srvmon-relay-linux-amd64.tar.gz
-curl -fsSLO https://monitor.appinsource.eu/downloads/SHA256SUMS
-sha256sum -c SHA256SUMS --ignore-missing
-tar -xzf srvmon-relay-linux-amd64.tar.gz</code></pre>
-      On an ARM machine, use <code>arm64</code> instead of <code>amd64</code>.
+    <li>Get the installer. In the app, open <strong>Team</strong>, tap <strong>Set up relay</strong> and share the installer to your computer. You can also download <a href="downloads/srvmon-relay-setup.sh">srvmon-relay-setup.sh</a> here.</li>
+    <li>Copy it to the machine that will be the relay:
+      <pre><code>scp srvmon-relay-setup.sh root@your-machine:/root/</code></pre>
     </li>
-    <li>Start the assistant:
-      <pre><code>cd srvmon-relay
-sudo ./setup.sh</code></pre>
+    <li>On that machine, run it:
+      <pre><code>sudo sh srvmon-relay-setup.sh</code></pre>
+      It is one file. It holds the relay for Intel and ARM machines, checks itself, and downloads nothing.
     </li>
     <li>Answer its questions. It asks for the domain, checks DNS, picks a free local port, and finds your web proxy. Caddy and Nginx are set up for you. With no proxy it offers to install Caddy. It shows what it will change and asks before it changes anything.</li>
     <li>At the end it prints the relay address and the admin token. Keep the token private.</li>
@@ -72,8 +69,7 @@ sudo ./setup.sh</code></pre>
 
   <h2>Connect the app</h2>
   <ol>
-    <li>In the app, open <strong>Team</strong> and tap <strong>Set up relay</strong>.</li>
-    <li>Enter the relay address and the admin token.</li>
+    <li>Back in <strong>Set up relay</strong>, enter the relay address and the admin token.</li>
     <li>Choose the servers to connect. The app tells each server's agent where the relay is, over your SSH login.</li>
     <li>Invite people. Each one joins with a QR code and sees only what you allow.</li>
   </ol>
@@ -94,7 +90,7 @@ sudo ./setup.sh</code></pre>
     <table>
       <thead><tr><th>What you see</th><th>Why</th><th>What to do</th></tr></thead>
       <tbody>
-        <tr><td><code>https://…</code> does not answer</td><td>DNS does not point here yet, or ports 80 and 443 are closed</td><td>Check the A record and the firewall, then run <code>sudo ./setup.sh</code> again. It keeps your token and data.</td></tr>
+        <tr><td><code>https://…</code> does not answer</td><td>DNS does not point here yet, or ports 80 and 443 are closed</td><td>Check the A record and the firewall, then run <code>sudo sh srvmon-relay-setup.sh</code> again. It keeps your token and data.</td></tr>
         <tr><td>The relay does not answer on the machine</td><td>The service did not start</td><td><code>journalctl -u srvmon-relay -n 30</code></td></tr>
         <tr><td>Servers keep going offline</td><td>The proxy cuts waiting requests</td><td>Set the proxy's read timeout to 60 seconds or more and turn response buffering off.</td></tr>
       </tbody>

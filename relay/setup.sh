@@ -1,6 +1,6 @@
 #!/bin/sh
 # Server Monitor relay: setup assistant. Asks a few questions, shows what it will do, then does it.
-# Run as root in the folder that holds the srvmon-relay binary:  sudo ./setup.sh
+# Started by srvmon-relay-setup.sh, or by hand as root next to a srvmon-relay binary.
 # Safe to run again: it keeps the existing admin token and data.
 # DRY_RUN=1 prints every change instead of making it (answers are read from stdin).
 set -eu
@@ -37,7 +37,7 @@ say "The relay is the mailbox between your servers and your team's phones."
 say "It runs on this machine. Your servers connect out to it, so they open no port."
 say "Press Enter to take the value in [brackets]."
 
-[ -n "$DRY" ] || [ "$(id -u)" = 0 ] || die "run this as root: sudo ./setup.sh"
+[ -n "$DRY" ] || [ "$(id -u)" = 0 ] || die "run this as root: sudo sh srvmon-relay-setup.sh"
 [ -n "$DRY" ] || command -v systemctl >/dev/null 2>&1 || die "this assistant needs systemd"
 [ -n "$DRY" ] || [ -x "$HERE/srvmon-relay" ] || die "srvmon-relay was not found next to this script"
 

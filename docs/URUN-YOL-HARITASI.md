@@ -24,6 +24,7 @@ Bu yüzden ürünün sözü şu: **terminale düşmeden sorunu gör ve çöz.** 
 | 2026-11-04 | Relay'in hangi sunucuda çalışacağı ileride bir **yönetim aracından** seçilecek. |
 | 2026-11-04 | **Merkezi relay yok.** Her kullanıcı kendi relay'ini kendi makinesine kurar. Kontrol uygulamadadır, ürünün bağlı olduğu bir kaynak yoktur. |
 | 2026-11-04 | Kurulum **soru-cevaplı bir asistanla** yapılır. Nasıl yapıldığı resmi sayfada anlatılır. |
+| 2026-11-04 | Müşteri **tek bir kurulum dosyası** alır (`srvmon-relay-setup.sh`), relay olacak makinede çalıştırır, makine relay olur. Dosya uygulamanın içinde gelir. |
 
 ## 3. Relay modeli
 
@@ -44,7 +45,7 @@ Bu yüzden ürünün sözü şu: **terminale düşmeden sorunu gör ve çöz.** 
 
 ## 4. Kurulum asistanı ve Süleyman'ın relay'i
 
-**Asistan bugün:** `relay/setup.sh`. Terminalde sırayla sorar: alan adı, port, web proxy, onay. Sonra kurar, test eder, adresi ve şifreyi yazar. Yalnızca prova modunda denendi, gerçek bir sunucuda henüz çalıştırılmadı. Dağıtım paketi `relay/make-release.sh` ile `official/downloads/` altına üretilir. Anlatım `official/relay.html` sayfasındadır.
+**Asistan bugün:** `srvmon-relay-setup.sh`, tek dosya. İçinde Intel ve ARM için relay programı ve `relay/setup.sh` vardır, kendini doğrular, internetten bir şey indirmez. `relay/make-release.sh` üretir; `make ios-resources` uygulamaya koyar, müşteri **Team → Set up relay → Share installer** ile alır. Terminalde sırayla sorar: alan adı, port, web proxy, onay. Sonra kurar, test eder, adresi ve şifreyi yazar. Yalnızca prova modunda denendi, gerçek bir sunucuda henüz çalıştırılmadı. Anlatım `official/relay.html` sayfasındadır.
 
 **Asistan için taslak plan:**
 1. Terminal asistanını gerçek bir sunucuda denemek.
