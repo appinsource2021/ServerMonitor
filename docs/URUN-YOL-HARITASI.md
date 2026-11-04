@@ -104,7 +104,7 @@ Sıra: izleme ve QR eşleştirme → uçtan uca şifreleme → terminal ve dosya
 | Süreç listesi | Bitti (agent 0.4.1). Gerçek sunucuda denenmeli. |
 | Web sitesi | `official/` klasöründe hazır, yayınlanmadı. Yeni özellikler (süreçler, servisler) eklenmeli. Gizlilik metni plana göre gözden geçirilmeli. |
 | Relay | #ST6000 projesinde çalışıyor, public açılması bekleniyor. Bölüm 4. |
-| Kurulum asistanı | Terminal sürümü yazıldı, gerçek sunucuda denenmeli. Uygulama içi sürüm sırada. |
+| Kurulum asistanı ve tek dosyalık kurulum | **Park edildi (2026-11-04, Süleyman): plan aşamasında kalıyor, sonra yapılacak.** İlk sürümü `c93378f` ile repoda, gerçek sunucuda denenmedi. Uygulama içi soru-cevap sürümü başlamadı. |
 | Resmi sayfa `relay.html` | Yazıldı, site ile birlikte yayınlanacak. |
 | 24 saatlik geçmiş | Sırada. |
 | iPad | Sırada. |
