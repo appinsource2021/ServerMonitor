@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"context"
 	"crypto/ed25519"
 	"crypto/subtle"
@@ -174,6 +175,11 @@ type Relay struct {
 func (rl *Relay) Handler() http.Handler {
 	m := http.NewServeMux()
 	m.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, map[string]any{"ok": true}) })
+	m.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'")
+		_, _ = io.WriteString(w, indexPage)
+	})
 
 	m.HandleFunc("GET /admin/v1/state", rl.admin(rl.adminState))
 	m.HandleFunc("POST /admin/v1/servers", rl.admin(rl.adminAddServer))
